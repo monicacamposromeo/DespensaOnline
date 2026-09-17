@@ -1,0 +1,3 @@
+- [x] Poder añadir diferentes ubucaciones para la despensa con sububicaciones solo de información. Para así poder añadir: (el pollo esta en el congelador cajón 2)
+- [x] Que la despensa sea un listado "normal" no un listado de tarjetas.
+- [x] Que el listado de la despensa, esté cada categría en la misma columna, es decir, que siempre quede la cantidad a la misma altura, que quede la ubicación de la despensa en la misma columna y el tema de la caducidad también (puede estar delante)

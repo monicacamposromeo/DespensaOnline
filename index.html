@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DespensaOnline - Despensa, Recetas, Menú Semanal y Lista de la Compra</title>
+    <meta name="description" content="Controla el stock de tu despensa, organiza tus recetas, planifica el menú semanal y genera automáticamente la lista de la compra.">
+
+    <!-- PWA & Mobile Meta Tags -->
+    <meta name="theme-color" content="#090d16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Despensa">
+
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="apple-touch-icon" href="./icon.svg">
+
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS Stylesheet -->
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="dark-mode landing-active">
+
+    <!-- ==========================================================================
+       LANDING PAGE
+       ========================================================================== -->
+    <div id="landing-page">
+        <header class="landing-header">
+            <div class="landing-logo">
+                <span class="logo-icon">🥫</span>
+                <span class="logo-text">Despensa<br><small>Online</small></span>
+            </div>
+        </header>
+
+        <section class="hero-section-simple">
+            <span class="hero-badge">🔒 100% privado, sin servidores propios</span>
+            <h1 class="hero-title">Tu despensa, tus recetas y la lista de la compra, todo conectado</h1>
+            <p class="hero-description">Controla el stock de tu despensa con fechas de caducidad, organiza tus recetas, planifica el menú semanal y genera automáticamente la lista de la compra según lo que ya tienes y lo que necesitas.</p>
+            <div class="hero-actions">
+                <button class="btn btn-primary btn-large" id="btn-landing-demo">▶️ Ver Demo</button>
+                <button class="btn btn-secondary btn-large" id="btn-landing-local-new">🆕 Crear Base de Datos Local</button>
+                <button class="btn btn-secondary btn-large" id="btn-landing-local-load">📁 Cargar Archivo Local (.json)</button>
+                <button class="btn btn-secondary btn-large" id="btn-landing-connect" disabled title="Disponible en una próxima versión">☁️ Conectar Supabase (próximamente)</button>
+            </div>
+            <input type="file" id="input-local-file" accept=".json" class="hidden">
+        </section>
+    </div>
+
+    <!-- ==========================================================================
+       APP INTERFACE
+       ========================================================================== -->
+    <div class="app-container hidden" id="app-interface">
+
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🥫</span>
+                    <span class="logo-text">Despensa<br><small>Online</small></span>
+                </div>
+                <button class="mobile-close" id="btn-close-sidebar" aria-label="Cerrar menú">×</button>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#despensa" class="nav-item active" id="nav-despensa">
+                    <span class="nav-icon-emoji">🥫</span><span>Despensa</span>
+                </a>
+                <a href="#recetas" class="nav-item" id="nav-recetas">
+                    <span class="nav-icon-emoji">📖</span><span>Recetas</span>
+                </a>
+                <a href="#menu" class="nav-item" id="nav-menu">
+                    <span class="nav-icon-emoji">📅</span><span>Menú Semanal</span>
+                </a>
+                <a href="#compra" class="nav-item" id="nav-compra">
+                    <span class="nav-icon-emoji">🛒</span><span>Lista de la Compra</span>
+                </a>
+                <a href="#configuracion" class="nav-item" id="nav-configuracion">
+                    <span class="nav-icon-emoji">⚙️</span><span>Configuración</span>
+                </a>
+                <a href="#landing" class="nav-item nav-item-exit" id="nav-exit-app">
+                    <span class="nav-icon-emoji">🚪</span><span>Volver a Inicio</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="btn-theme-toggle" aria-label="Cambiar tema">
+                    <span class="theme-icon">☀️</span>
+                    <span class="theme-text">Modo Claro</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <header class="top-bar">
+                <div class="left-section">
+                    <button class="mobile-menu-btn" id="btn-menu-toggle" aria-label="Abrir menú">☰</button>
+                    <h1 class="page-title" id="bar-title">Despensa</h1>
+                </div>
+                <div class="right-section">
+                    <div class="demo-badge hidden" id="demo-mode-badge"><span>DEMO</span></div>
+                    <button class="btn btn-secondary btn-icon-only hidden" id="btn-download-local" title="Descargar Base de Datos (.json)">📥</button>
+                    <div class="api-status-badge disconnected" id="api-status">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Desconectado</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="loading-overlay" id="loading-spinner">
+                <div class="spinner"></div>
+                <p>Cargando...</p>
+            </div>
+
+            <div class="content-container">
+
+                <!-- ================= DESPENSA ================= -->
+                <section class="app-screen active" id="screen-despensa">
+                    <div class="screen-toolbar">
+                        <div class="toolbar-filters">
+                            <input type="text" id="despensa-search" class="form-input" placeholder="🔎 Buscar producto...">
+                            <select id="despensa-filter-ubicacion" class="form-select">
+                                <option value="todas">Todas las ubicaciones</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-lote">+ Añadir a la despensa</button>
+                    </div>
+                    <div id="despensa-alertas" class="alertas-caducidad"></div>
+                    <div class="lote-row lote-row-header hidden" id="despensa-list-header">
+                        <span class="lote-col-producto">Producto</span>
+                        <span class="lote-col-caducidad">Caducidad</span>
+                        <span class="lote-col-cantidad">Cantidad</span>
+                        <span class="lote-col-ubicacion">Ubicación</span>
+                    </div>
+                    <div id="despensa-list" class="lotes-list"></div>
+                    <p class="empty-state hidden" id="despensa-empty">Tu despensa está vacía. Añade tu primer producto para empezar.</p>
+                </section>
+
+                <!-- ================= RECETAS ================= -->
+                <section class="app-screen" id="screen-recetas">
+                    <div class="screen-toolbar">
+                        <select id="recetas-filter-categoria" class="form-select">
+                            <option value="todas">Todas las categorías</option>
+                            <option value="desayuno">🍳 Desayuno</option>
+                            <option value="comida">🍽️ Comida</option>
+                            <option value="cena">🌙 Cena</option>
+                            <option value="postre">🍰 Postre</option>
+                            <option value="snack">🥨 Snack</option>
+                        </select>
+                        <button class="btn btn-primary" id="btn-add-receta">+ Nueva receta</button>
+                    </div>
+                    <div id="recetas-list" class="recetas-grid"></div>
+                    <p class="empty-state hidden" id="recetas-empty">No hay recetas todavía. Crea la primera.</p>
+                </section>
+
+                <!-- ================= MENU SEMANAL ================= -->
+                <section class="app-screen" id="screen-menu">
+                    <div class="screen-toolbar">
+                        <div class="week-nav">
+                            <button class="btn btn-secondary btn-icon-only" id="btn-week-prev" aria-label="Semana anterior">‹</button>
+                            <span id="week-range-label" class="week-range-label"></span>
+                            <button class="btn btn-secondary btn-icon-only" id="btn-week-next" aria-label="Semana siguiente">›</button>
+                            <button class="btn btn-secondary" id="btn-week-today">Esta semana</button>
+                        </div>
+                        <button class="btn btn-primary" id="btn-generar-lista">🛒 Generar lista de la compra</button>
+                    </div>
+                    <div class="menu-grid-wrapper">
+                        <div id="menu-grid" class="menu-grid"></div>
+                    </div>
+                </section>
+
+                <!-- ================= LISTA DE LA COMPRA ================= -->
+                <section class="app-screen" id="screen-compra">
+                    <div class="screen-toolbar">
+                        <form id="form-add-manual-compra" class="inline-form">
+                            <select id="in-compra-producto" class="form-select" required></select>
+                            <input type="number" id="in-compra-cantidad" class="form-input" placeholder="Cantidad" min="0" step="0.01" required>
+                            <button type="submit" class="btn btn-primary">+ Añadir</button>
+                        </form>
+                        <button class="btn btn-secondary" id="btn-limpiar-comprados">Quitar comprados</button>
+                    </div>
+                    <div class="compra-columns">
+                        <div class="compra-column">
+                            <h3>🛒 Generado del menú</h3>
+                            <div id="compra-list-menu" class="compra-list"></div>
+                        </div>
+                        <div class="compra-column">
+                            <h3>✍️ Añadido a mano</h3>
+                            <div id="compra-list-manual" class="compra-list"></div>
+                        </div>
+                    </div>
+                    <p class="empty-state hidden" id="compra-empty">La lista de la compra está vacía.</p>
+                </section>
+
+                <!-- ================= CONFIGURACIÓN ================= -->
+                <section class="app-screen" id="screen-configuracion">
+                    <div class="config-grid">
+                        <div class="card config-card">
+                            <h3>📦 Modo de datos</h3>
+                            <p id="config-modo-actual" class="config-modo-actual"></p>
+                            <div id="card-config-local" class="hidden config-local-actions">
+                                <button class="btn btn-secondary" id="btn-config-download-local">📥 Descargar Base de Datos</button>
+                                <button class="btn btn-secondary" id="btn-config-load-local">📁 Cargar otro archivo</button>
+                            </div>
+                            <p class="config-hint">La conexión a Supabase estará disponible en una próxima versión (ver <code>PLAN-IMPLEMENTACION.md</code>, Fase 4).</p>
+                        </div>
+
+                        <div class="card config-card">
+                            <h3>📍 Ubicaciones de la despensa</h3>
+                            <form id="form-nueva-ubicacion" class="inline-form inline-form-wrap">
+                                <input type="text" id="in-ubicacion-nombre" class="form-input" placeholder="Nombre (ej. Trastero, Bodega...)" required>
+                                <input type="text" id="in-ubicacion-icono" class="form-input form-input-icon" placeholder="📍" maxlength="2">
+                                <button type="submit" class="btn btn-primary">+ Añadir</button>
+                            </form>
+                            <div id="ubicaciones-list" class="productos-list"></div>
+                        </div>
+
+                        <div class="card config-card">
+                            <h3>🍎 Catálogo de productos</h3>
+                            <form id="form-nuevo-producto" class="inline-form inline-form-wrap">
+                                <input type="text" id="in-producto-nombre" class="form-input" placeholder="Nombre" required>
+                                <input type="text" id="in-producto-categoria" class="form-input" placeholder="Categoría (ej. Verdura)">
+                                <select id="in-producto-unidad" class="form-select">
+                                    <option value="ud">ud</option>
+                                    <option value="g">g</option>
+                                    <option value="kg">kg</option>
+                                    <option value="ml">ml</option>
+                                    <option value="l">l</option>
+                                </select>
+                                <input type="text" id="in-producto-icono" class="form-input form-input-icon" placeholder="🥕" maxlength="2">
+                                <button type="submit" class="btn btn-primary">+ Añadir</button>
+                            </form>
+                            <div id="productos-list" class="productos-list"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==========================================================================
+       MODALS
+       ========================================================================== -->
+
+    <!-- Modal: lote de despensa -->
+    <div class="modal-backdrop hidden" id="modal-lote">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-lote-title">Añadir producto a la despensa</h2>
+                <button class="modal-close" id="btn-close-modal-lote" aria-label="Cerrar">×</button>
+            </div>
+            <form id="form-lote">
+                <input type="hidden" id="in-lote-id">
+                <div class="form-group">
+                    <label for="in-lote-producto">Producto</label>
+                    <select id="in-lote-producto" class="form-select" required></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-lote-cantidad">Cantidad</label>
+                        <input type="number" id="in-lote-cantidad" class="form-input" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="in-lote-ubicacion">Ubicación</label>
+                        <select id="in-lote-ubicacion" class="form-select" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="in-lote-detalle-ubicacion">Detalle de ubicación (opcional)</label>
+                    <input type="text" id="in-lote-detalle-ubicacion" class="form-input" placeholder="ej. Cajón 2, balda de arriba...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-lote-fecha-entrada">Fecha de entrada</label>
+                        <input type="date" id="in-lote-fecha-entrada" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="in-lote-fecha-caducidad">Fecha de caducidad (opcional)</label>
+                        <input type="date" id="in-lote-fecha-caducidad" class="form-input">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger hidden" id="btn-delete-lote">Eliminar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: receta -->
+    <div class="modal-backdrop hidden" id="modal-receta">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 id="modal-receta-title">Nueva receta</h2>
+                <button class="modal-close" id="btn-close-modal-receta" aria-label="Cerrar">×</button>
+            </div>
+            <form id="form-receta">
+                <input type="hidden" id="in-receta-id">
+                <div class="form-group">
+                    <label for="in-receta-nombre">Nombre</label>
+                    <input type="text" id="in-receta-nombre" class="form-input" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="in-receta-categoria">Categoría</label>
+                        <select id="in-receta-categoria" class="form-select">
+                            <option value="desayuno">🍳 Desayuno</option>
+                            <option value="comida">🍽️ Comida</option>
+                            <option value="cena">🌙 Cena</option>
+                            <option value="postre">🍰 Postre</option>
+                            <option value="snack">🥨 Snack</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="in-receta-tiempo">Tiempo (min)</label>
+                        <input type="number" id="in-receta-tiempo" class="form-input" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="in-receta-comensales">Comensales base</label>
+                        <input type="number" id="in-receta-comensales" class="form-input" min="1" value="2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="in-receta-instrucciones">Instrucciones (opcional)</label>
+                    <textarea id="in-receta-instrucciones" class="form-input" rows="3"></textarea>
+                </div>
+
+                <div class="ingredientes-editor">
+                    <div class="ingredientes-editor-header">
+                        <label>Ingredientes (cantidad para los comensales base)</label>
+                        <button type="button" class="btn btn-secondary btn-small" id="btn-add-ingrediente-row">+ Ingrediente</button>
+                    </div>
+                    <div id="ingredientes-rows"></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger hidden" id="btn-delete-receta">Eliminar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: hueco de menú semanal -->
+    <div class="modal-backdrop hidden" id="modal-menu-entry">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-menu-entry-title">Asignar receta</h2>
+                <button class="modal-close" id="btn-close-modal-menu-entry" aria-label="Cerrar">×</button>
+            </div>
+            <form id="form-menu-entry">
+                <input type="hidden" id="in-menu-entry-id">
+                <input type="hidden" id="in-menu-entry-fecha">
+                <input type="hidden" id="in-menu-entry-tipo">
+                <div class="form-group">
+                    <label for="in-menu-entry-receta">Receta</label>
+                    <select id="in-menu-entry-receta" class="form-select" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="in-menu-entry-comensales">Comensales</label>
+                    <input type="number" id="in-menu-entry-comensales" class="form-input" min="1" value="2">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger hidden" id="btn-delete-menu-entry">Quitar del menú</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ==========================================================================
+       Scripts (sin build, sin módulos ES: el orden importa)
+       ========================================================================== -->
+    <script src="./js/state.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/storage.js"></script>
+    <script src="./js/api.js"></script>
+    <script src="./js/despensa.js"></script>
+    <script src="./js/recetas.js"></script>
+    <script src="./js/menu.js"></script>
+    <script src="./js/lista-compra.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/event-handlers.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>

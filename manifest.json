@@ -1,0 +1,14 @@
+{
+  "name": "DespensaOnline - Despensa, Recetas y Menú Semanal",
+  "short_name": "DespensaOnline",
+  "description": "Gestiona tu despensa, tus recetas y el menú semanal, y genera automáticamente tu lista de la compra.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "any",
+  "icons": [
+    { "src": "icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

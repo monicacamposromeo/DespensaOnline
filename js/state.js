@@ -3,8 +3,8 @@
    ========================================================================== */
 
 const TIPOS_COMIDA = ['desayuno', 'comida', 'cena'];
-const TIPO_COMIDA_LABELS = { desayuno: '🍳 Desayuno', comida: '🍽️ Comida', cena: '🌙 Cena' };
-const CATEGORIA_RECETA_LABELS = { desayuno: '🍳 Desayuno', comida: '🍽️ Comida', cena: '🌙 Cena', postre: '🍰 Postre', snack: '🥨 Snack' };
+const TIPO_COMIDA_LABELS = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena' };
+const CATEGORIA_RECETA_LABELS = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena', postre: 'Postre', snack: 'Snack' };
 const DIAS_SEMANA_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIAS_ALERTA_CADUCIDAD = 3;
 
@@ -18,6 +18,7 @@ const state = {
 
     isDemoMode: false,
     isLocalMode: false,
+    supabaseChannel: null,
 
     productos: [],
     ubicaciones: [],
@@ -46,14 +47,19 @@ const DOM = {
     btnLandingLocalNew: document.getElementById('btn-landing-local-new'),
     btnLandingLocalLoad: document.getElementById('btn-landing-local-load'),
     btnLandingConnect: document.getElementById('btn-landing-connect'),
+    modalSupabase: document.getElementById('modal-supabase'),
+    btnCloseModalSupabase: document.getElementById('btn-close-modal-supabase'),
+    btnCancelSupabase: document.getElementById('btn-cancel-supabase'),
+    formSupabaseConnect: document.getElementById('form-supabase-connect'),
+    inSupabaseUrl: document.getElementById('in-supabase-url'),
+    inSupabaseKey: document.getElementById('in-supabase-key'),
+    configSupabaseInfo: document.getElementById('config-supabase-info'),
+    btnConfigSupabaseConnect: document.getElementById('btn-config-supabase-connect'),
+    btnConfigSupabaseDisconnect: document.getElementById('btn-config-supabase-disconnect'),
     inputLocalFile: document.getElementById('input-local-file'),
 
     // App shell / navigation
-    sidebar: document.getElementById('app-sidebar'),
-    btnMenuToggle: document.getElementById('btn-menu-toggle'),
-    btnCloseSidebar: document.getElementById('btn-close-sidebar'),
     btnThemeToggle: document.getElementById('btn-theme-toggle'),
-    themeIcon: document.querySelector('.theme-icon'),
     themeText: document.querySelector('.theme-text'),
     navExitApp: document.getElementById('nav-exit-app'),
     screens: document.querySelectorAll('.app-screen'),
@@ -67,15 +73,14 @@ const DOM = {
 
     // Despensa screen
     despensaSearch: document.getElementById('despensa-search'),
-    despensaFilterUbicacion: document.getElementById('despensa-filter-ubicacion'),
+    despensaChipsUbicacion: document.getElementById('despensa-chips-ubicacion'),
     btnAddLote: document.getElementById('btn-add-lote'),
     despensaAlertas: document.getElementById('despensa-alertas'),
-    despensaListHeader: document.getElementById('despensa-list-header'),
     despensaList: document.getElementById('despensa-list'),
     despensaEmpty: document.getElementById('despensa-empty'),
 
     // Recetas screen
-    recetasFilterCategoria: document.getElementById('recetas-filter-categoria'),
+    recetasChipsCategoria: document.getElementById('recetas-chips-categoria'),
     btnAddReceta: document.getElementById('btn-add-receta'),
     recetasList: document.getElementById('recetas-list'),
     recetasEmpty: document.getElementById('recetas-empty'),
@@ -87,6 +92,8 @@ const DOM = {
     weekRangeLabel: document.getElementById('week-range-label'),
     btnGenerarLista: document.getElementById('btn-generar-lista'),
     menuGrid: document.getElementById('menu-grid'),
+    menuDaystrip: document.getElementById('menu-daystrip'),
+    menuAgenda: document.getElementById('menu-agenda'),
 
     // Lista de la compra screen
     formAddManualCompra: document.getElementById('form-add-manual-compra'),
@@ -102,6 +109,7 @@ const DOM = {
     cardConfigLocal: document.getElementById('card-config-local'),
     btnConfigDownloadLocal: document.getElementById('btn-config-download-local'),
     btnConfigLoadLocal: document.getElementById('btn-config-load-local'),
+    btnConfigDeleteLocal: document.getElementById('btn-config-delete-local'),
     formNuevoProducto: document.getElementById('form-nuevo-producto'),
     inProductoNombre: document.getElementById('in-producto-nombre'),
     inProductoCategoria: document.getElementById('in-producto-categoria'),
@@ -126,6 +134,7 @@ const DOM = {
     inLoteFechaEntrada: document.getElementById('in-lote-fecha-entrada'),
     inLoteFechaCaducidad: document.getElementById('in-lote-fecha-caducidad'),
     btnDeleteLote: document.getElementById('btn-delete-lote'),
+    btnCancelLote: document.getElementById('btn-cancel-lote'),
 
     // Modal: receta
     modalReceta: document.getElementById('modal-receta'),
@@ -141,6 +150,7 @@ const DOM = {
     btnAddIngredienteRow: document.getElementById('btn-add-ingrediente-row'),
     ingredientesRows: document.getElementById('ingredientes-rows'),
     btnDeleteReceta: document.getElementById('btn-delete-receta'),
+    btnCancelReceta: document.getElementById('btn-cancel-receta'),
 
     // Modal: hueco de menú semanal
     modalMenuEntry: document.getElementById('modal-menu-entry'),
@@ -152,7 +162,8 @@ const DOM = {
     inMenuEntryTipo: document.getElementById('in-menu-entry-tipo'),
     inMenuEntryReceta: document.getElementById('in-menu-entry-receta'),
     inMenuEntryComensales: document.getElementById('in-menu-entry-comensales'),
-    btnDeleteMenuEntry: document.getElementById('btn-delete-menu-entry')
+    btnDeleteMenuEntry: document.getElementById('btn-delete-menu-entry'),
+    btnCancelMenuEntry: document.getElementById('btn-cancel-menu-entry')
 };
 
 /* ==========================================================================
@@ -180,6 +191,8 @@ function addDaysToISO(dateStr, days) {
 
 // Semana actualmente visible en las pantallas Menú Semanal / Lista de la Compra.
 state.selectedWeekStart = getMonday(new Date());
+// Día seleccionado en la vista móvil (un día a la vez) del menú semanal.
+state.selectedDayISO = formatISODate(new Date());
 
 /* ==========================================================================
    Datos derivados del dominio

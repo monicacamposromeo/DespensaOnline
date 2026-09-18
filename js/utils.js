@@ -54,16 +54,7 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '❌';
-    if (type === 'warning') icon = '⚠️';
-
-    toast.innerHTML = `
-        <span class="toast-icon">${icon}</span>
-        <span class="toast-message">${escapeHtml(message)}</span>
-    `;
+    toast.innerHTML = `<span class="toast-message">${escapeHtml(message)}</span>`;
 
     container.appendChild(toast);
 
@@ -72,4 +63,15 @@ function showToast(message, type = 'info') {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 250);
     }, 2200);
+}
+
+// Marca como activo un solo chip dentro de un contenedor de filtros (chips deslizables).
+function setActiveChip(container, activeChip) {
+    container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    activeChip.classList.add('active');
+}
+
+// Inicial en mayúscula para el avatar de producto/ubicación (sustituye a los iconos emoji).
+function monogramLetter(nombre) {
+    return (nombre || '?').trim().charAt(0).toUpperCase() || '?';
 }

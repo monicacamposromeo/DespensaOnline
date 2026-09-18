@@ -21,7 +21,7 @@ js/despensa.js               Pantalla Despensa: lotes por producto/ubicación, a
 js/recetas.js                Pantalla Recetas: alta/edición de receta + sus ingredientes
 js/menu.js                   Pantalla Menú Semanal: vista 7 días × comida, asignación de recetas
 js/lista-compra.js            Pantalla Lista de la Compra: generación automática + añadido manual, checklist
-js/event-handlers.js          Listeners de formularios/UI, inicialización
+js/event-handler.js           Listeners de formularios/UI, inicialización
 js/utils.js                   Helpers de formato (fechas, cantidades), toasts, spinner
 ```
 

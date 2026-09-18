@@ -5,10 +5,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initRouting();
-    initMobileSidebar();
     initNavExitApp();
     initModalBackdropClose();
     initLandingActions();
+    initSupabaseActions();
     initDespensaActions();
     initRecetasActions();
     initMenuActions();
@@ -23,10 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function initRouting() {
     window.addEventListener('hashchange', handleRoute);
     handleRoute();
-
-    DOM.navItems.forEach(item => {
-        item.addEventListener('click', () => DOM.sidebar.classList.remove('mobile-open'));
-    });
 }
 
 function handleRoute() {

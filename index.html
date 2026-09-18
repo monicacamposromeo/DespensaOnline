@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DespensaOnline - Despensa, Recetas, Menú Semanal y Lista de la Compra</title>
     <meta name="description" content="Controla el stock de tu despensa, organiza tus recetas, planifica el menú semanal y genera automáticamente la lista de la compra.">
 
@@ -28,28 +28,42 @@
 <body class="dark-mode landing-active">
 
     <!-- ==========================================================================
+       ICONOS (sprite SVG reutilizado en toda la app, sin emoji de interfaz)
+       ========================================================================== -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="ic-pantry" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="3" rx="1"/><path d="M7.5 7 6.5 19a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2L16.5 7Z"/><line x1="6.9" y1="12.4" x2="17.1" y2="12.4"/></symbol>
+        <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.5c-1.5-1.3-3.6-1.9-6.2-1.9v13.4c2.6 0 4.7.6 6.2 1.9 1.5-1.3 3.6-1.9 6.2-1.9V4.6c-2.6 0-4.7.6-6.2 1.9Z"/><line x1="12" y1="6.5" x2="12" y2="19.9"/></symbol>
+        <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="8" y1="3.4" x2="8" y2="7"/><line x1="16" y1="3.4" x2="16" y2="7"/></symbol>
+        <symbol id="ic-cart" viewBox="0 0 24 24"><path d="M4 5h2l1.7 9.7a2 2 0 0 0 2 1.7h6.8a2 2 0 0 0 2-1.6L20 8H7.2"/><circle cx="10" cy="19.4" r="1.3"/><circle cx="16.6" cy="19.4" r="1.3"/></symbol>
+        <symbol id="ic-sliders" viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><circle cx="9.5" cy="7" r="1.7"/><line x1="5" y1="12.5" x2="19" y2="12.5"/><circle cx="15.5" cy="12.5" r="1.7"/><line x1="5" y1="18" x2="19" y2="18"/><circle cx="11" cy="18" r="1.7"/></symbol>
+        <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+        <symbol id="ic-chev-right" viewBox="0 0 24 24"><path d="M9.5 5 16 12l-6.5 7"/></symbol>
+        <symbol id="ic-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+        <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v11.5"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+    </svg>
+
+    <!-- ==========================================================================
        LANDING PAGE
        ========================================================================== -->
     <div id="landing-page">
-        <header class="landing-header">
-            <div class="landing-logo">
-                <span class="logo-icon">🥫</span>
-                <span class="logo-text">Despensa<br><small>Online</small></span>
-            </div>
-        </header>
+        <div class="landing-card">
+            <div class="landing-mark">Despensa<span>Online</span></div>
+            <p class="landing-tag">Tu despensa, tus recetas y la compra, en un solo sitio.</p>
 
-        <section class="hero-section-simple">
-            <span class="hero-badge">🔒 100% privado, sin servidores propios</span>
-            <h1 class="hero-title">Tu despensa, tus recetas y la lista de la compra, todo conectado</h1>
-            <p class="hero-description">Controla el stock de tu despensa con fechas de caducidad, organiza tus recetas, planifica el menú semanal y genera automáticamente la lista de la compra según lo que ya tienes y lo que necesitas.</p>
-            <div class="hero-actions">
-                <button class="btn btn-primary btn-large" id="btn-landing-demo">▶️ Ver Demo</button>
-                <button class="btn btn-secondary btn-large" id="btn-landing-local-new">🆕 Crear Base de Datos Local</button>
-                <button class="btn btn-secondary btn-large" id="btn-landing-local-load">📁 Cargar Archivo Local (.json)</button>
-                <button class="btn btn-secondary btn-large" id="btn-landing-connect" disabled title="Disponible en una próxima versión">☁️ Conectar Supabase (próximamente)</button>
+            <button class="btn btn-primary btn-large landing-primary" id="btn-landing-local-new">Crear base de datos local</button>
+
+            <div class="landing-links">
+                <button class="landing-link" id="btn-landing-demo">Ver demo</button>
+                <span class="landing-links-sep">·</span>
+                <button class="landing-link" id="btn-landing-local-load">Cargar archivo (.json)</button>
             </div>
+
+            <button class="landing-link" id="btn-landing-connect">Conectar con Supabase</button>
+
             <input type="file" id="input-local-file" accept=".json" class="hidden">
-        </section>
+
+            <p class="landing-foot">100% privado: tus datos se guardan en este dispositivo, no en un servidor.</p>
+        </div>
     </div>
 
     <!-- ==========================================================================
@@ -57,54 +71,32 @@
        ========================================================================== -->
     <div class="app-container hidden" id="app-interface">
 
-        <aside class="sidebar" id="app-sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <span class="logo-icon">🥫</span>
-                    <span class="logo-text">Despensa<br><small>Online</small></span>
-                </div>
-                <button class="mobile-close" id="btn-close-sidebar" aria-label="Cerrar menú">×</button>
-            </div>
-
-            <nav class="nav-menu">
-                <a href="#despensa" class="nav-item active" id="nav-despensa">
-                    <span class="nav-icon-emoji">🥫</span><span>Despensa</span>
-                </a>
-                <a href="#recetas" class="nav-item" id="nav-recetas">
-                    <span class="nav-icon-emoji">📖</span><span>Recetas</span>
-                </a>
-                <a href="#menu" class="nav-item" id="nav-menu">
-                    <span class="nav-icon-emoji">📅</span><span>Menú Semanal</span>
-                </a>
-                <a href="#compra" class="nav-item" id="nav-compra">
-                    <span class="nav-icon-emoji">🛒</span><span>Lista de la Compra</span>
-                </a>
-                <a href="#configuracion" class="nav-item" id="nav-configuracion">
-                    <span class="nav-icon-emoji">⚙️</span><span>Configuración</span>
-                </a>
-                <a href="#landing" class="nav-item nav-item-exit" id="nav-exit-app">
-                    <span class="nav-icon-emoji">🚪</span><span>Volver a Inicio</span>
-                </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <button class="theme-toggle" id="btn-theme-toggle" aria-label="Cambiar tema">
-                    <span class="theme-icon">☀️</span>
-                    <span class="theme-text">Modo Claro</span>
-                </button>
-            </div>
-        </aside>
+        <nav class="bottomnav" id="app-bottomnav">
+            <div class="rail-mark" aria-hidden="true">DO</div>
+            <a href="#despensa" class="nav-item active" id="nav-despensa">
+                <svg class="nav-icon"><use href="#ic-pantry"/></svg><span>Despensa</span>
+            </a>
+            <a href="#recetas" class="nav-item" id="nav-recetas">
+                <svg class="nav-icon"><use href="#ic-book"/></svg><span>Recetas</span>
+            </a>
+            <a href="#menu" class="nav-item" id="nav-menu">
+                <svg class="nav-icon"><use href="#ic-calendar"/></svg><span>Menú</span>
+            </a>
+            <a href="#compra" class="nav-item" id="nav-compra">
+                <svg class="nav-icon"><use href="#ic-cart"/></svg><span>Compra</span>
+            </a>
+            <a href="#configuracion" class="nav-item" id="nav-configuracion">
+                <svg class="nav-icon"><use href="#ic-sliders"/></svg><span>Ajustes</span>
+            </a>
+        </nav>
 
         <main class="main-content">
 
             <header class="top-bar">
-                <div class="left-section">
-                    <button class="mobile-menu-btn" id="btn-menu-toggle" aria-label="Abrir menú">☰</button>
-                    <h1 class="page-title" id="bar-title">Despensa</h1>
-                </div>
+                <h1 class="page-title" id="bar-title">Despensa</h1>
                 <div class="right-section">
                     <div class="demo-badge hidden" id="demo-mode-badge"><span>DEMO</span></div>
-                    <button class="btn btn-secondary btn-icon-only hidden" id="btn-download-local" title="Descargar Base de Datos (.json)">📥</button>
+                    <button class="btn btn-secondary btn-icon-only hidden" id="btn-download-local" title="Descargar base de datos (.json)"><svg class="icon-sm"><use href="#ic-download"/></svg></button>
                     <div class="api-status-badge disconnected" id="api-status">
                         <span class="status-dot"></span>
                         <span class="status-text">Desconectado</span>
@@ -121,41 +113,27 @@
 
                 <!-- ================= DESPENSA ================= -->
                 <section class="app-screen active" id="screen-despensa">
-                    <div class="screen-toolbar">
-                        <div class="toolbar-filters">
-                            <input type="text" id="despensa-search" class="form-input" placeholder="🔎 Buscar producto...">
-                            <select id="despensa-filter-ubicacion" class="form-select">
-                                <option value="todas">Todas las ubicaciones</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" id="btn-add-lote">+ Añadir a la despensa</button>
-                    </div>
+                    <input type="text" id="despensa-search" class="search-input" placeholder="Buscar producto…">
+                    <div class="chips" id="despensa-chips-ubicacion"></div>
                     <div id="despensa-alertas" class="alertas-caducidad"></div>
-                    <div class="lote-row lote-row-header hidden" id="despensa-list-header">
-                        <span class="lote-col-producto">Producto</span>
-                        <span class="lote-col-caducidad">Caducidad</span>
-                        <span class="lote-col-cantidad">Cantidad</span>
-                        <span class="lote-col-ubicacion">Ubicación</span>
-                    </div>
                     <div id="despensa-list" class="lotes-list"></div>
                     <p class="empty-state hidden" id="despensa-empty">Tu despensa está vacía. Añade tu primer producto para empezar.</p>
+                    <button class="fab" id="btn-add-lote" aria-label="Añadir a la despensa"><svg class="icon"><use href="#ic-plus"/></svg></button>
                 </section>
 
                 <!-- ================= RECETAS ================= -->
                 <section class="app-screen" id="screen-recetas">
-                    <div class="screen-toolbar">
-                        <select id="recetas-filter-categoria" class="form-select">
-                            <option value="todas">Todas las categorías</option>
-                            <option value="desayuno">🍳 Desayuno</option>
-                            <option value="comida">🍽️ Comida</option>
-                            <option value="cena">🌙 Cena</option>
-                            <option value="postre">🍰 Postre</option>
-                            <option value="snack">🥨 Snack</option>
-                        </select>
-                        <button class="btn btn-primary" id="btn-add-receta">+ Nueva receta</button>
+                    <div class="chips" id="recetas-chips-categoria">
+                        <button type="button" class="chip active" data-value="todas">Todas</button>
+                        <button type="button" class="chip" data-value="desayuno">Desayuno</button>
+                        <button type="button" class="chip" data-value="comida">Comida</button>
+                        <button type="button" class="chip" data-value="cena">Cena</button>
+                        <button type="button" class="chip" data-value="postre">Postre</button>
+                        <button type="button" class="chip" data-value="snack">Snack</button>
                     </div>
                     <div id="recetas-list" class="recetas-grid"></div>
                     <p class="empty-state hidden" id="recetas-empty">No hay recetas todavía. Crea la primera.</p>
+                    <button class="fab" id="btn-add-receta" aria-label="Nueva receta"><svg class="icon"><use href="#ic-plus"/></svg></button>
                 </section>
 
                 <!-- ================= MENU SEMANAL ================= -->
@@ -165,63 +143,87 @@
                             <button class="btn btn-secondary btn-icon-only" id="btn-week-prev" aria-label="Semana anterior">‹</button>
                             <span id="week-range-label" class="week-range-label"></span>
                             <button class="btn btn-secondary btn-icon-only" id="btn-week-next" aria-label="Semana siguiente">›</button>
-                            <button class="btn btn-secondary" id="btn-week-today">Esta semana</button>
                         </div>
-                        <button class="btn btn-primary" id="btn-generar-lista">🛒 Generar lista de la compra</button>
+                        <button class="btn btn-secondary" id="btn-week-today">Hoy</button>
                     </div>
-                    <div class="menu-grid-wrapper">
+
+                    <!-- Vista móvil: un día a la vez -->
+                    <div id="menu-day-view">
+                        <div class="daystrip" id="menu-daystrip"></div>
+                        <div id="menu-agenda"></div>
+                    </div>
+
+                    <!-- Vista de escritorio: semana completa -->
+                    <div class="menu-grid-wrapper" id="menu-week-view">
                         <div id="menu-grid" class="menu-grid"></div>
                     </div>
+
+                    <button class="btn btn-primary btn-block" id="btn-generar-lista"><svg class="icon-sm"><use href="#ic-cart"/></svg>Generar lista de la compra</button>
                 </section>
 
                 <!-- ================= LISTA DE LA COMPRA ================= -->
                 <section class="app-screen" id="screen-compra">
-                    <div class="screen-toolbar">
-                        <form id="form-add-manual-compra" class="inline-form">
-                            <select id="in-compra-producto" class="form-select" required></select>
-                            <input type="number" id="in-compra-cantidad" class="form-input" placeholder="Cantidad" min="0" step="0.01" required>
-                            <button type="submit" class="btn btn-primary">+ Añadir</button>
-                        </form>
-                        <button class="btn btn-secondary" id="btn-limpiar-comprados">Quitar comprados</button>
+                    <form id="form-add-manual-compra" class="inline-form">
+                        <select id="in-compra-producto" class="form-select" required></select>
+                        <input type="number" id="in-compra-cantidad" class="form-input" placeholder="Cantidad" min="0" step="0.01" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </form>
+
+                    <div class="compra-section">
+                        <h2 class="section-title">Del menú</h2>
+                        <div id="compra-list-menu" class="compra-list"></div>
                     </div>
-                    <div class="compra-columns">
-                        <div class="compra-column">
-                            <h3>🛒 Generado del menú</h3>
-                            <div id="compra-list-menu" class="compra-list"></div>
-                        </div>
-                        <div class="compra-column">
-                            <h3>✍️ Añadido a mano</h3>
-                            <div id="compra-list-manual" class="compra-list"></div>
-                        </div>
+                    <div class="compra-section">
+                        <h2 class="section-title">Añadido a mano</h2>
+                        <div id="compra-list-manual" class="compra-list"></div>
                     </div>
+
                     <p class="empty-state hidden" id="compra-empty">La lista de la compra está vacía.</p>
+                    <button class="text-btn" id="btn-limpiar-comprados">Quitar comprados</button>
                 </section>
 
                 <!-- ================= CONFIGURACIÓN ================= -->
                 <section class="app-screen" id="screen-configuracion">
                     <div class="config-grid">
                         <div class="card config-card">
-                            <h3>📦 Modo de datos</h3>
+                            <h3>Modo de datos</h3>
                             <p id="config-modo-actual" class="config-modo-actual"></p>
                             <div id="card-config-local" class="hidden config-local-actions">
-                                <button class="btn btn-secondary" id="btn-config-download-local">📥 Descargar Base de Datos</button>
-                                <button class="btn btn-secondary" id="btn-config-load-local">📁 Cargar otro archivo</button>
+                                <button class="btn btn-secondary" id="btn-config-download-local">Descargar base de datos</button>
+                                <button class="btn btn-secondary" id="btn-config-load-local">Cargar otro archivo</button>
+                                <button class="btn btn-danger" id="btn-config-delete-local">Eliminar base de datos local</button>
                             </div>
-                            <p class="config-hint">La conexión a Supabase estará disponible en una próxima versión (ver <code>PLAN-IMPLEMENTACION.md</code>, Fase 4).</p>
+                            <p class="config-hint">La conexión a Supabase es independiente de este modo y se gestiona en la tarjeta de abajo.</p>
                         </div>
 
                         <div class="card config-card">
-                            <h3>📍 Ubicaciones de la despensa</h3>
+                            <h3>Conexión a Supabase</h3>
+                            <p class="config-modo-actual" id="config-supabase-info">Sin conectar.</p>
+                            <div class="config-local-actions">
+                                <button class="btn btn-secondary" id="btn-config-supabase-connect">Conectar / cambiar credenciales</button>
+                                <button class="btn btn-danger hidden" id="btn-config-supabase-disconnect">Desconectar</button>
+                            </div>
+                        </div>
+
+                        <div class="card config-card">
+                            <h3>Apariencia</h3>
+                            <button class="theme-toggle" id="btn-theme-toggle" aria-label="Cambiar tema">
+                                <span class="theme-text">Modo oscuro</span>
+                            </button>
+                        </div>
+
+                        <div class="card config-card">
+                            <h3>Ubicaciones de la despensa</h3>
                             <form id="form-nueva-ubicacion" class="inline-form inline-form-wrap">
                                 <input type="text" id="in-ubicacion-nombre" class="form-input" placeholder="Nombre (ej. Trastero, Bodega...)" required>
-                                <input type="text" id="in-ubicacion-icono" class="form-input form-input-icon" placeholder="📍" maxlength="2">
-                                <button type="submit" class="btn btn-primary">+ Añadir</button>
+                                <input type="hidden" id="in-ubicacion-icono" value="">
+                                <button type="submit" class="btn btn-primary">Añadir</button>
                             </form>
                             <div id="ubicaciones-list" class="productos-list"></div>
                         </div>
 
                         <div class="card config-card">
-                            <h3>🍎 Catálogo de productos</h3>
+                            <h3>Catálogo de productos</h3>
                             <form id="form-nuevo-producto" class="inline-form inline-form-wrap">
                                 <input type="text" id="in-producto-nombre" class="form-input" placeholder="Nombre" required>
                                 <input type="text" id="in-producto-categoria" class="form-input" placeholder="Categoría (ej. Verdura)">
@@ -232,12 +234,14 @@
                                     <option value="ml">ml</option>
                                     <option value="l">l</option>
                                 </select>
-                                <input type="text" id="in-producto-icono" class="form-input form-input-icon" placeholder="🥕" maxlength="2">
-                                <button type="submit" class="btn btn-primary">+ Añadir</button>
+                                <input type="hidden" id="in-producto-icono" value="">
+                                <button type="submit" class="btn btn-primary">Añadir</button>
                             </form>
                             <div id="productos-list" class="productos-list"></div>
                         </div>
                     </div>
+
+                    <button class="exit-link" id="nav-exit-app">Salir y volver al inicio</button>
                 </section>
 
             </div>
@@ -245,15 +249,16 @@
     </div>
 
     <!-- ==========================================================================
-       MODALS
+       MODALS (se muestran como hoja inferior en móvil y modal centrado en escritorio)
        ========================================================================== -->
 
     <!-- Modal: lote de despensa -->
     <div class="modal-backdrop hidden" id="modal-lote">
         <div class="modal">
+            <div class="sheet-handle"></div>
             <div class="modal-header">
                 <h2 id="modal-lote-title">Añadir producto a la despensa</h2>
-                <button class="modal-close" id="btn-close-modal-lote" aria-label="Cerrar">×</button>
+                <button class="modal-close" id="btn-close-modal-lote" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
             </div>
             <form id="form-lote">
                 <input type="hidden" id="in-lote-id">
@@ -287,6 +292,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-lote">Eliminar</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-lote">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
@@ -296,9 +302,10 @@
     <!-- Modal: receta -->
     <div class="modal-backdrop hidden" id="modal-receta">
         <div class="modal modal-large">
+            <div class="sheet-handle"></div>
             <div class="modal-header">
                 <h2 id="modal-receta-title">Nueva receta</h2>
-                <button class="modal-close" id="btn-close-modal-receta" aria-label="Cerrar">×</button>
+                <button class="modal-close" id="btn-close-modal-receta" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
             </div>
             <form id="form-receta">
                 <input type="hidden" id="in-receta-id">
@@ -310,11 +317,11 @@
                     <div class="form-group">
                         <label for="in-receta-categoria">Categoría</label>
                         <select id="in-receta-categoria" class="form-select">
-                            <option value="desayuno">🍳 Desayuno</option>
-                            <option value="comida">🍽️ Comida</option>
-                            <option value="cena">🌙 Cena</option>
-                            <option value="postre">🍰 Postre</option>
-                            <option value="snack">🥨 Snack</option>
+                            <option value="desayuno">Desayuno</option>
+                            <option value="comida">Comida</option>
+                            <option value="cena">Cena</option>
+                            <option value="postre">Postre</option>
+                            <option value="snack">Snack</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -341,6 +348,7 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-receta">Eliminar</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-receta">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
@@ -350,9 +358,10 @@
     <!-- Modal: hueco de menú semanal -->
     <div class="modal-backdrop hidden" id="modal-menu-entry">
         <div class="modal">
+            <div class="sheet-handle"></div>
             <div class="modal-header">
                 <h2 id="modal-menu-entry-title">Asignar receta</h2>
-                <button class="modal-close" id="btn-close-modal-menu-entry" aria-label="Cerrar">×</button>
+                <button class="modal-close" id="btn-close-modal-menu-entry" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
             </div>
             <form id="form-menu-entry">
                 <input type="hidden" id="in-menu-entry-id">
@@ -368,7 +377,34 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-menu-entry">Quitar del menú</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-menu-entry">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: conexión a Supabase -->
+    <div class="modal-backdrop hidden" id="modal-supabase">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2>Conectar con Supabase</h2>
+                <button class="modal-close" id="btn-close-modal-supabase" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <form id="form-supabase-connect">
+                <div class="form-group">
+                    <label for="in-supabase-url">Project URL</label>
+                    <input type="url" id="in-supabase-url" class="form-input" placeholder="https://xxxxxxxx.supabase.co" required>
+                </div>
+                <div class="form-group">
+                    <label for="in-supabase-key">Anon public key</label>
+                    <input type="text" id="in-supabase-key" class="form-input" placeholder="eyJhbGciOi..." required>
+                </div>
+                <p class="config-hint">Ambos datos están en tu proyecto de Supabase, en Project Settings → API. Se guardan solo en este dispositivo (localStorage), nunca en el código.</p>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-supabase">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Conectar</button>
                 </div>
             </form>
         </div>
@@ -379,6 +415,7 @@
     <!-- ==========================================================================
        Scripts (sin build, sin módulos ES: el orden importa)
        ========================================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./js/state.js"></script>
     <script src="./js/utils.js"></script>
     <script src="./js/storage.js"></script>
@@ -388,7 +425,7 @@
     <script src="./js/menu.js"></script>
     <script src="./js/lista-compra.js"></script>
     <script src="./js/config.js"></script>
-    <script src="./js/event-handlers.js"></script>
+    <script src="./js/event-handler.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>

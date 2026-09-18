@@ -83,11 +83,11 @@ function compraItemHtml(item) {
         <div class="compra-item ${item.comprado ? 'comprado' : ''}">
             <label class="compra-item-label">
                 <input type="checkbox" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''}>
-                <span class="compra-item-icono">${escapeHtml(producto.icono || '🍽️')}</span>
+                <span class="mono mono-sm">${escapeHtml(monogramLetter(producto.nombre))}</span>
                 <span class="compra-item-nombre">${escapeHtml(producto.nombre)}</span>
                 <span class="compra-item-cantidad">${formatCantidad(item.cantidad, producto.unidad)}</span>
             </label>
-            <button type="button" class="btn-icon-only compra-item-delete" data-compra-delete="${item.id}" title="Quitar">×</button>
+            <button type="button" class="row-delete" data-compra-delete="${item.id}" title="Quitar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `;
 }

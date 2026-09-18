@@ -19,7 +19,6 @@ function renderDespensa() {
         .sort((a, b) => (getProducto(a.productoId)?.nombre || '').localeCompare(getProducto(b.productoId)?.nombre || ''));
 
     DOM.despensaEmpty.classList.toggle('hidden', lotesActivos.length > 0);
-    DOM.despensaListHeader.classList.toggle('hidden', lotesActivos.length === 0);
 
     if (lotesActivos.length > 0 && lotesFiltrados.length === 0) {
         DOM.despensaList.innerHTML = '<p class="empty-state-inline">No hay productos que coincidan con el filtro.</p>';
@@ -47,27 +46,27 @@ function renderAlertasCaducidad() {
     let html = '';
     if (caducados.length > 0) {
         const nombres = caducados.map(a => getProducto(a.lote.productoId)?.nombre || '?').join(', ');
-        html += `<div class="alerta-caducidad alerta-caducado">🔴 Caducado(s): ${escapeHtml(nombres)}</div>`;
+        html += `<div class="alert-strip alert-danger">Caducado(s): ${escapeHtml(nombres)}</div>`;
     }
     if (proximos.length > 0) {
         const nombres = proximos.map(a => getProducto(a.lote.productoId)?.nombre || '?').join(', ');
-        html += `<div class="alerta-caducidad alerta-proximo">🟡 A punto de caducar: ${escapeHtml(nombres)}</div>`;
+        html += `<div class="alert-strip alert-warn">A punto de caducar: ${escapeHtml(nombres)}</div>`;
     }
     DOM.despensaAlertas.innerHTML = html;
 }
 
-function caducidadCellHtml(lote) {
+function caducidadStatusHtml(lote) {
     if (!lote.fecha_caducidad) {
-        return '<span class="lote-caducidad-vacia">—</span>';
+        return '<span class="status-pill neutral">Sin caducidad</span>';
     }
     const info = getLotesPorCaducar().find(a => a.lote.id === lote.id);
     if (info?.estado === 'caducado') {
-        return `<span class="badge badge-danger">🔴 ${formatDate(lote.fecha_caducidad)}</span>`;
+        return `<span class="status-pill danger">Caducó · ${formatDate(lote.fecha_caducidad)}</span>`;
     }
     if (info?.estado === 'proximo') {
-        return `<span class="badge badge-warning">🟡 ${formatDate(lote.fecha_caducidad)}</span>`;
+        return `<span class="status-pill warn">Caduca · ${formatDate(lote.fecha_caducidad)}</span>`;
     }
-    return `<span class="lote-caducidad-fecha">${formatDate(lote.fecha_caducidad)}</span>`;
+    return `<span class="status-pill neutral">${formatDate(lote.fecha_caducidad)}</span>`;
 }
 
 function loteRowHtml(lote) {
@@ -75,20 +74,18 @@ function loteRowHtml(lote) {
     if (!producto) return '';
 
     const ubicacion = getUbicacion(lote.ubicacionId);
-    const ubicacionLabel = ubicacion ? `${escapeHtml(ubicacion.icono || '📍')} ${escapeHtml(ubicacion.nombre)}` : '—';
+    const ubicacionLabel = ubicacion ? escapeHtml(ubicacion.nombre) : '—';
     const detalle = lote.detalle_ubicacion ? ` · ${escapeHtml(lote.detalle_ubicacion)}` : '';
-    const tituloUbicacion = ubicacion ? `${ubicacion.nombre}${lote.detalle_ubicacion ? ' · ' + lote.detalle_ubicacion : ''}` : '';
 
     return `
-        <div class="lote-row" data-lote-id="${lote.id}">
-            <span class="lote-col-producto">
-                <span class="lote-row-icono">${escapeHtml(producto.icono || '🍽️')}</span>
-                <span class="lote-row-nombre">${escapeHtml(producto.nombre)}</span>
+        <button type="button" class="item-row" data-lote-id="${lote.id}">
+            <span class="mono">${escapeHtml(monogramLetter(producto.nombre))}</span>
+            <span class="item-main">
+                <span class="item-name">${escapeHtml(producto.nombre)}</span>
+                <span class="item-meta">${ubicacionLabel}${detalle} · ${formatCantidad(lote.cantidad, producto.unidad)}</span>
             </span>
-            <span class="lote-col-caducidad">${caducidadCellHtml(lote)}</span>
-            <span class="lote-col-cantidad">${formatCantidad(lote.cantidad, producto.unidad)}</span>
-            <span class="lote-col-ubicacion badge badge-ubicacion" title="${escapeHtml(tituloUbicacion)}">${ubicacionLabel}${detalle}</span>
-        </div>
+            ${caducidadStatusHtml(lote)}
+        </button>
     `;
 }
 

@@ -33,6 +33,9 @@ function renderMenuSemanal() {
             openMenuEntryModal(fecha, tipo, entrada);
         });
     });
+
+    renderDayStrip();
+    renderAgendaDia();
 }
 
 function menuCellHtml(fecha, tipo, entrada) {
@@ -43,9 +46,54 @@ function menuCellHtml(fecha, tipo, entrada) {
     return `
         <div class="menu-grid-cell" data-menu-cell data-fecha="${fecha}" data-tipo="${tipo}">
             <strong>${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</strong>
-            <span class="menu-grid-comensales">👥 ${entrada.comensales}</span>
+            <span class="menu-grid-comensales">${entrada.comensales} comensales</span>
         </div>
     `;
+}
+
+/* ==========================================================================
+   Vista móvil: un día a la vez (tira de fechas + agenda de comidas del día)
+   ========================================================================== */
+function renderDayStrip() {
+    const dias = getWeekDates(state.selectedWeekStart);
+    const hoy = todayISO();
+
+    DOM.menuDaystrip.innerHTML = dias.map((fecha, i) => {
+        const dia = parseInt(fecha.split('-')[2], 10);
+        const clases = ['daychip', fecha === hoy ? 'today' : '', fecha === state.selectedDayISO ? 'active' : ''].filter(Boolean).join(' ');
+        return `<button type="button" class="${clases}" data-fecha="${fecha}">
+            <span class="dow">${DIAS_SEMANA_LABELS[i].slice(0, 3)}</span><span class="num">${dia}</span>
+        </button>`;
+    }).join('');
+
+    DOM.menuDaystrip.querySelectorAll('[data-fecha]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            state.selectedDayISO = chip.dataset.fecha;
+            renderDayStrip();
+            renderAgendaDia();
+        });
+    });
+}
+
+function renderAgendaDia() {
+    const fecha = state.selectedDayISO;
+    DOM.menuAgenda.innerHTML = TIPOS_COMIDA.map(tipo => {
+        const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
+        const receta = entrada ? getReceta(entrada.recetaId) : null;
+        const valor = receta ? escapeHtml(receta.nombre) : 'Añadir receta';
+        return `<button type="button" class="meal-row" data-fecha="${fecha}" data-tipo="${tipo}">
+            <span><span class="meal-label">${TIPO_COMIDA_LABELS[tipo]}</span><span class="meal-value${receta ? '' : ' empty'}">${valor}</span></span>
+            <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
+        </button>`;
+    }).join('');
+
+    DOM.menuAgenda.querySelectorAll('[data-fecha]').forEach(row => {
+        row.addEventListener('click', () => {
+            const { fecha, tipo } = row.dataset;
+            const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
+            openMenuEntryModal(fecha, tipo, entrada);
+        });
+    });
 }
 
 function openMenuEntryModal(fecha, tipoComida, entrada = null) {
@@ -103,10 +151,12 @@ async function handleDeleteMenuEntry() {
 
 function goToWeek(offsetWeeks) {
     state.selectedWeekStart = addDaysToISO(state.selectedWeekStart, offsetWeeks * 7);
+    state.selectedDayISO = addDaysToISO(state.selectedDayISO, offsetWeeks * 7);
     renderMenuSemanal();
 }
 
 function goToCurrentWeek() {
     state.selectedWeekStart = getMonday(new Date());
+    state.selectedDayISO = todayISO();
     renderMenuSemanal();
 }

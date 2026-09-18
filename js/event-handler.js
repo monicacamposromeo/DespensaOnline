@@ -22,13 +22,7 @@ function initTheme() {
 }
 
 function updateThemeToggleUI(isDark) {
-    DOM.themeIcon.textContent = isDark ? '☀️' : '🌙';
-    DOM.themeText.textContent = isDark ? 'Modo Claro' : 'Modo Oscuro';
-}
-
-function initMobileSidebar() {
-    DOM.btnMenuToggle.addEventListener('click', () => DOM.sidebar.classList.add('mobile-open'));
-    DOM.btnCloseSidebar.addEventListener('click', () => DOM.sidebar.classList.remove('mobile-open'));
+    DOM.themeText.textContent = isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
 }
 
 function initNavExitApp() {
@@ -60,12 +54,43 @@ function initLandingActions() {
     DOM.btnLandingLocalNew.addEventListener('click', createNewLocalDB);
     DOM.btnLandingLocalLoad.addEventListener('click', () => DOM.inputLocalFile.click());
     DOM.inputLocalFile.addEventListener('change', (e) => handleLocalFileSelected(e.target.files[0]));
+    DOM.btnLandingConnect.addEventListener('click', () => openSupabaseModal());
+}
+
+function initSupabaseActions() {
+    DOM.btnConfigSupabaseConnect.addEventListener('click', () => openSupabaseModal());
+    DOM.btnConfigSupabaseDisconnect.addEventListener('click', () => {
+        if (confirm('¿Desconectar de Supabase? Volverás a la pantalla de inicio.')) disconnectSupabase();
+    });
+    DOM.btnCloseModalSupabase.addEventListener('click', closeSupabaseModal);
+    DOM.btnCancelSupabase.addEventListener('click', closeSupabaseModal);
+    DOM.formSupabaseConnect.addEventListener('submit', handleSupabaseConnectSubmit);
+}
+
+function openSupabaseModal() {
+    DOM.inSupabaseUrl.value = state.apiUrl || '';
+    DOM.inSupabaseKey.value = state.supabaseKey || '';
+    DOM.modalSupabase.classList.remove('hidden');
+}
+
+function closeSupabaseModal() {
+    DOM.modalSupabase.classList.add('hidden');
+}
+
+async function handleSupabaseConnectSubmit(e) {
+    e.preventDefault();
+    const url = DOM.inSupabaseUrl.value.trim().replace(/\/+$/, '');
+    const key = DOM.inSupabaseKey.value.trim();
+    if (!url || !key) return;
+    const ok = await connectSupabase(url, key);
+    if (ok) closeSupabaseModal();
 }
 
 function initConfigActions() {
     DOM.btnConfigDownloadLocal.addEventListener('click', downloadLocalDB);
     DOM.btnDownloadLocal.addEventListener('click', downloadLocalDB);
     DOM.btnConfigLoadLocal.addEventListener('click', () => DOM.inputLocalFile.click());
+    DOM.btnConfigDeleteLocal.addEventListener('click', deleteLocalDB);
     DOM.formNuevoProducto.addEventListener('submit', handleNuevoProductoSubmit);
     DOM.formNuevaUbicacion.addEventListener('submit', handleNuevaUbicacionSubmit);
 }
@@ -73,19 +98,33 @@ function initConfigActions() {
 function initDespensaActions() {
     DOM.btnAddLote.addEventListener('click', () => openLoteModal());
     DOM.btnCloseModalLote.addEventListener('click', closeLoteModal);
+    DOM.btnCancelLote.addEventListener('click', closeLoteModal);
     DOM.formLote.addEventListener('submit', handleLoteFormSubmit);
     DOM.btnDeleteLote.addEventListener('click', handleDeleteLote);
     DOM.despensaSearch.addEventListener('input', (e) => { state.despensaFiltro.search = e.target.value; renderDespensa(); });
-    DOM.despensaFilterUbicacion.addEventListener('change', (e) => { state.despensaFiltro.ubicacion = e.target.value; renderDespensa(); });
+    DOM.despensaChipsUbicacion.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.despensaFiltro.ubicacion = chip.dataset.value;
+        setActiveChip(DOM.despensaChipsUbicacion, chip);
+        renderDespensa();
+    });
 }
 
 function initRecetasActions() {
     DOM.btnAddReceta.addEventListener('click', () => openRecetaModal());
     DOM.btnCloseModalReceta.addEventListener('click', closeRecetaModal);
+    DOM.btnCancelReceta.addEventListener('click', closeRecetaModal);
     DOM.formReceta.addEventListener('submit', handleRecetaFormSubmit);
     DOM.btnDeleteReceta.addEventListener('click', handleDeleteReceta);
     DOM.btnAddIngredienteRow.addEventListener('click', () => addIngredienteRow());
-    DOM.recetasFilterCategoria.addEventListener('change', (e) => { state.recetasFiltro.categoria = e.target.value; renderRecetas(); });
+    DOM.recetasChipsCategoria.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.recetasFiltro.categoria = chip.dataset.value;
+        setActiveChip(DOM.recetasChipsCategoria, chip);
+        renderRecetas();
+    });
 }
 
 function initMenuActions() {
@@ -94,6 +133,7 @@ function initMenuActions() {
     DOM.btnWeekToday.addEventListener('click', goToCurrentWeek);
     DOM.btnGenerarLista.addEventListener('click', generarListaCompraSemana);
     DOM.btnCloseModalMenuEntry.addEventListener('click', closeMenuEntryModal);
+    DOM.btnCancelMenuEntry.addEventListener('click', closeMenuEntryModal);
     DOM.formMenuEntry.addEventListener('submit', handleMenuEntryFormSubmit);
     DOM.btnDeleteMenuEntry.addEventListener('click', handleDeleteMenuEntry);
     DOM.inMenuEntryReceta.addEventListener('change', () => {

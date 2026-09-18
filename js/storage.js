@@ -134,13 +134,31 @@ function updateLocalModeUI() {
         DOM.cardConfigLocal.classList.add('hidden');
         DOM.configModoActual.textContent = 'Modo Demo: los datos son de ejemplo y solo existen en memoria; se perderán al recargar la página.';
         DOM.demoModeBadge.classList.remove('hidden');
+    } else if (state.apiUrl && state.supabaseKey) {
+        DOM.apiStatus.className = 'api-status-badge connected';
+        DOM.apiStatusText.textContent = 'Supabase';
+        DOM.btnDownloadLocal.classList.add('hidden');
+        DOM.cardConfigLocal.classList.add('hidden');
+        DOM.configModoActual.textContent = 'Conectado a Supabase: los datos se guardan en la nube y se sincronizan en tiempo real entre pestañas y dispositivos.';
+        DOM.demoModeBadge.classList.add('hidden');
     } else {
         DOM.apiStatus.className = 'api-status-badge disconnected';
         DOM.apiStatusText.textContent = 'Desconectado';
         DOM.btnDownloadLocal.classList.add('hidden');
         DOM.cardConfigLocal.classList.add('hidden');
-        DOM.configModoActual.textContent = 'Sin conectar. La conexión a Supabase estará disponible en una próxima versión.';
+        DOM.configModoActual.textContent = 'Sin conectar.';
         DOM.demoModeBadge.classList.add('hidden');
+    }
+    updateSupabaseConfigUI();
+}
+
+function updateSupabaseConfigUI() {
+    const conectado = !!(state.apiUrl && state.supabaseKey);
+    if (DOM.configSupabaseInfo) {
+        DOM.configSupabaseInfo.textContent = conectado ? `Conectado a ${state.apiUrl}` : 'Sin conectar.';
+    }
+    if (DOM.btnConfigSupabaseDisconnect) {
+        DOM.btnConfigSupabaseDisconnect.classList.toggle('hidden', !conectado);
     }
 }
 
@@ -164,6 +182,13 @@ function downloadLocalDB() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('Copia de seguridad descargada con éxito', 'success');
+}
+
+function deleteLocalDB() {
+    if (!confirm('¿Eliminar la base de datos local guardada en este dispositivo? Esta acción no se puede deshacer. Si quieres conservarla, descárgala antes con "Descargar base de datos".')) return;
+    localStorage.removeItem('despensa_local_db');
+    localStorage.removeItem('despensa_is_local_mode');
+    location.reload();
 }
 
 function checkLocalCache() {
@@ -192,9 +217,15 @@ function checkLocalCache() {
                 console.error('Error cargando la base de datos local en caché', e);
             }
         }
+        return;
     }
-    // Nota: la rama Supabase (detectar URL/Key guardadas y sincronizar) se añade en la
-    // Fase 4 del plan de implementación (ver PLAN-IMPLEMENTACION.md).
+
+    // Si hay credenciales de Supabase guardadas de una sesión anterior, reconectar directamente
+    // sin pasar por la landing (ver ARQUITECTURA-PLANTILLA.md §4.4: "al arrancar, si hay
+    // credenciales guardadas, cargar datos + abrir Realtime").
+    if (state.apiUrl && state.supabaseKey) {
+        connectSupabase(state.apiUrl, state.supabaseKey);
+    }
 }
 
 /* ==========================================================================

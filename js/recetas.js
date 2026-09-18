@@ -31,15 +31,19 @@ function recetaCardHtml(receta) {
         .filter(Boolean)
         .join(', ');
 
+    const meta = [
+        receta.tiempo_preparacion_min ? `${receta.tiempo_preparacion_min} min` : null,
+        `${receta.comensales_base} comensales`
+    ].filter(Boolean).join(' · ');
+
     return `
-        <div class="card receta-card" data-receta-id="${receta.id}">
-            <div class="receta-card-header">
-                <span class="receta-categoria-badge">${CATEGORIA_RECETA_LABELS[receta.categoria] || receta.categoria}</span>
-                ${receta.tiempo_preparacion_min ? `<span class="receta-tiempo">⏱️ ${receta.tiempo_preparacion_min} min</span>` : ''}
+        <div class="recipe-card" data-receta-id="${receta.id}">
+            <div class="recipe-top">
+                <span class="recipe-name">${escapeHtml(receta.nombre)}</span>
+                <span class="recipe-cat">${CATEGORIA_RECETA_LABELS[receta.categoria] || receta.categoria}</span>
             </div>
-            <h3 class="receta-nombre">${escapeHtml(receta.nombre)}</h3>
-            <p class="receta-comensales">👥 ${receta.comensales_base} comensales</p>
-            <p class="receta-ingredientes-preview">${escapeHtml(nombresIngredientes || 'Sin ingredientes')}</p>
+            <p class="recipe-meta">${meta}</p>
+            <p class="recipe-desc">${escapeHtml(nombresIngredientes || 'Sin ingredientes')}</p>
         </div>
     `;
 }
@@ -81,7 +85,7 @@ function addIngredienteRow(productoId = null, cantidad = '') {
 
     const options = state.productos
         .filter(p => p.activa)
-        .map(p => `<option value="${p.id}" ${String(p.id) === String(productoId) ? 'selected' : ''}>${escapeHtml(p.icono || '')} ${escapeHtml(p.nombre)} (${escapeHtml(p.unidad)})</option>`)
+        .map(p => `<option value="${p.id}" ${String(p.id) === String(productoId) ? 'selected' : ''}>${escapeHtml(p.nombre)} (${escapeHtml(p.unidad)})</option>`)
         .join('');
 
     row.innerHTML = `

@@ -5,12 +5,11 @@
 function renderProductosConfig() {
     const productos = state.productos.filter(p => p.activa).sort((a, b) => a.nombre.localeCompare(b.nombre));
     DOM.productosList.innerHTML = productos.map(p => `
-        <div class="producto-row">
-            <span class="producto-icono">${escapeHtml(p.icono || '🍽️')}</span>
-            <span class="producto-nombre">${escapeHtml(p.nombre)}</span>
-            <span class="producto-categoria">${escapeHtml(p.categoria || '')}</span>
-            <span class="producto-unidad">${escapeHtml(p.unidad)}</span>
-            <button type="button" class="btn-icon-only producto-delete" data-producto-delete="${p.id}" title="Desactivar producto">🗑️</button>
+        <div class="catalog-row">
+            <span class="mono mono-sm">${escapeHtml(monogramLetter(p.nombre))}</span>
+            <span class="catalog-name">${escapeHtml(p.nombre)}</span>
+            <span class="catalog-meta">${escapeHtml(p.categoria || '')}${p.categoria ? ' · ' : ''}${escapeHtml(p.unidad)}</span>
+            <button type="button" class="row-delete" data-producto-delete="${p.id}" title="Desactivar producto"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `).join('');
 
@@ -21,7 +20,7 @@ function renderProductosConfig() {
 
 function populateProductoSelectors() {
     const productos = state.productos.filter(p => p.activa).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const options = productos.map(p => `<option value="${p.id}">${escapeHtml(p.icono || '')} ${escapeHtml(p.nombre)}</option>`).join('');
+    const options = productos.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('');
     if (DOM.inLoteProducto) DOM.inLoteProducto.innerHTML = options;
     if (DOM.inCompraProducto) DOM.inCompraProducto.innerHTML = options;
 }
@@ -38,7 +37,7 @@ async function handleNuevoProductoSubmit(e) {
         nombre: DOM.inProductoNombre.value,
         categoria: DOM.inProductoCategoria.value,
         unidad: DOM.inProductoUnidad.value,
-        icono: DOM.inProductoIcono.value || '🍽️'
+        icono: DOM.inProductoIcono.value || ''
     };
     const result = await apiRequest('producto', 'POST', payload);
     if (result && result.success) {
@@ -70,10 +69,10 @@ async function handleDeleteProducto(id) {
 function renderUbicacionesConfig() {
     const ubicaciones = state.ubicaciones.filter(u => u.activa).sort((a, b) => a.nombre.localeCompare(b.nombre));
     DOM.ubicacionesList.innerHTML = ubicaciones.map(u => `
-        <div class="producto-row">
-            <span class="producto-icono">${escapeHtml(u.icono || '📍')}</span>
-            <span class="producto-nombre">${escapeHtml(u.nombre)}</span>
-            <button type="button" class="btn-icon-only ubicacion-delete" data-ubicacion-delete="${u.id}" title="Desactivar ubicación">🗑️</button>
+        <div class="catalog-row">
+            <span class="mono mono-sm">${escapeHtml(monogramLetter(u.nombre))}</span>
+            <span class="catalog-name">${escapeHtml(u.nombre)}</span>
+            <button type="button" class="row-delete" data-ubicacion-delete="${u.id}" title="Desactivar ubicación"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `).join('');
 
@@ -84,21 +83,30 @@ function renderUbicacionesConfig() {
 
 function populateUbicacionSelectors() {
     const ubicaciones = state.ubicaciones.filter(u => u.activa).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    const options = ubicaciones.map(u => `<option value="${u.id}">${escapeHtml(u.icono || '')} ${escapeHtml(u.nombre)}</option>`).join('');
+    const options = ubicaciones.map(u => `<option value="${u.id}">${escapeHtml(u.nombre)}</option>`).join('');
     if (DOM.inLoteUbicacion) DOM.inLoteUbicacion.innerHTML = options;
+    renderDespensaUbicacionChips(ubicaciones);
+}
 
-    if (DOM.despensaFilterUbicacion) {
-        const currentValue = DOM.despensaFilterUbicacion.value || 'todas';
-        DOM.despensaFilterUbicacion.innerHTML = `<option value="todas">Todas las ubicaciones</option>${options}`;
-        DOM.despensaFilterUbicacion.value = currentValue;
-    }
+// Chips de ubicación del filtro de Despensa (reemplazan al desplegable de la versión anterior).
+function renderDespensaUbicacionChips(ubicaciones) {
+    if (!DOM.despensaChipsUbicacion) return;
+    const existeFiltroActual = ubicaciones.some(u => String(u.id) === String(state.despensaFiltro.ubicacion));
+    if (!existeFiltroActual) state.despensaFiltro.ubicacion = 'todas';
+
+    const chipsHtml = [`<button type="button" class="chip" data-value="todas">Todas</button>`]
+        .concat(ubicaciones.map(u => `<button type="button" class="chip" data-value="${u.id}">${escapeHtml(u.nombre)}</button>`));
+    DOM.despensaChipsUbicacion.innerHTML = chipsHtml.join('');
+
+    const activo = DOM.despensaChipsUbicacion.querySelector(`[data-value="${state.despensaFiltro.ubicacion}"]`);
+    if (activo) activo.classList.add('active');
 }
 
 async function handleNuevaUbicacionSubmit(e) {
     e.preventDefault();
     const payload = {
         nombre: DOM.inUbicacionNombre.value,
-        icono: DOM.inUbicacionIcono.value || '📍'
+        icono: DOM.inUbicacionIcono.value || ''
     };
     const result = await apiRequest('ubicacion', 'POST', payload);
     if (result && result.success) {

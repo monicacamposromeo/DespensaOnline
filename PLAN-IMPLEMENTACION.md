@@ -37,12 +37,12 @@ Basado en `ARQUITECTURA-PLANTILLA.md` (patrón de infraestructura) y `DOCUMENTAC
 
 ## Fase 4 — Backend Supabase
 
-- [ ] Crear proyecto en supabase.com; ejecutar el SQL de creación de `DOCUMENTACIÓN-TECNICA.md` (Apéndice de §3).
+- [ ] Crear proyecto en supabase.com; ejecutar el SQL de creación de `DOCUMENTACIÓN-TECNICA.md` (Apéndice de §3). *(en curso por el usuario)*
 - [ ] Habilitar Realtime en `despensa`, `menu_semanal`, `lista_compra`.
 - [ ] Decidir RLS: desactivada o políticas `USING (true)` (single-user, igual que Registro Contable).
-- [ ] Copiar `Project URL` + `anon public key`; implementar la rama Supabase de `apiRequest` (fetch REST directo a `/rest/v1/<tabla>` por cada acción del §7 de Documentación Técnica) + `initSupabaseRealtime()` con debounce.
-- [ ] Pantalla Configuración: introducir/guardar credenciales Supabase, cambiar entre modos Demo/Local/Supabase, exportar/importar backup JSON (modo Local).
-- [ ] Verificar sincronización entre dos pestañas/dispositivos abiertos a la vez (Realtime).
+- [x] Implementada la rama Supabase de `apiRequest` (fetch REST directo a `/rest/v1/<tabla>` por cada acción del §7 de Documentación Técnica) + `initSupabaseRealtime()` con debounce de 300ms sobre `despensa`, `ubicaciones`, `menu_semanal` y `lista_compra`.
+- [x] Pantalla Configuración: tarjeta "Conexión a Supabase" para introducir/guardar credenciales y desconectar; botón "Conectar con Supabase" en la landing abre el mismo formulario (modal `modal-supabase`); reconexión automática al recargar si hay credenciales guardadas.
+- [ ] Verificar sincronización entre dos pestañas/dispositivos abiertos a la vez (Realtime) — pendiente de que el usuario tenga el proyecto Supabase creado.
 
 ## Fase 5 — PWA y despliegue (parcial — falta el despliegue en sí)
 
@@ -63,7 +63,7 @@ Basado en `ARQUITECTURA-PLANTILLA.md` (patrón de infraestructura) y `DOCUMENTAC
 
 ## Estado actual
 
-Implementadas y verificadas manualmente por el usuario: **Fases 0, 1, 2 y 3** (estructura, modo Demo/Local, Despensa, Recetas, Menú Semanal y Lista de la Compra). La Fase 5 está hecha en el código (PWA lista) pero el despliegue real en GitHub Pages y la prueba en móvil siguen pendientes de que el proyecto se suba a un repositorio remoto. La **Fase 4 (Supabase) sigue sin implementar**, a petición expresa.
+Implementadas y verificadas manualmente por el usuario: **Fases 0, 1, 2 y 3** (estructura, modo Demo/Local, Despensa, Recetas, Menú Semanal y Lista de la Compra). La Fase 5 está hecha en el código (PWA lista) pero el despliegue real en GitHub Pages y la prueba en móvil siguen pendientes de que el proyecto se suba a un repositorio remoto. La **Fase 4 (Supabase) está implementada en el código** (rama Supabase de `apiRequest`, Realtime con debounce, pantalla de conexión); falta que el usuario termine de crear el proyecto/tablas en Supabase y se pruebe la conexión y la sincronización real.
 
 ---
 

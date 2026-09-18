@@ -1,4 +1,4 @@
-const CACHE_NAME = 'despensa-online-v1'; // subir el número al cambiar el set de assets cacheados
+const CACHE_NAME = 'despensa-online-v2'; // subir el número al cambiar el set de assets cacheados
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -15,7 +15,8 @@ const ASSETS_TO_CACHE = [
     './js/menu.js',
     './js/lista-compra.js',
     './js/config.js',
-    './js/event-handlers.js'
+    './js/event-handler.js',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
 self.addEventListener('install', event => {
@@ -37,7 +38,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Nunca cachear la futura API de datos (Supabase, Fase 4) ni peticiones no-GET
+    // Nunca cachear la API de datos de Supabase ni peticiones no-GET
     if (event.request.method !== 'GET' || url.href.includes('supabase.co') || url.pathname.includes('/rest/v1/')) {
         return;
     }

@@ -1,0 +1,948 @@
+<!doctype html>
+<title>DespensaOnline</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Tokens
+   ========================================================================== */
+:root{
+  --bg:#f6f3ee; --surface:#ffffff; --surface-sunken:#ece7dc; --line:#e2ddd0;
+  --ink:#21261d; --ink-soft:#656b5c; --ink-faint:#9a9c8c;
+  --accent:#3c6e47; --accent-ink:#ffffff; --accent-soft:#e3ede1;
+  --cool:#3d6f86; --cool-soft:#e2edf1;
+  --warn:#a97427; --warn-soft:#f6ead2;
+  --danger:#af4636; --danger-soft:#f6ded9;
+  --shadow: 0 12px 30px -14px rgba(33,38,29,0.35);
+  --shadow-sm: 0 2px 8px -2px rgba(33,38,29,0.18);
+  --font-display:'Archivo',-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Work Sans',-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12140f; --surface:#1b1f16; --surface-sunken:#262c1d; --line:#2c331f;
+    --ink:#ece7db; --ink-soft:#a7ac99; --ink-faint:#767c67;
+    --accent:#7cb789; --accent-ink:#0d150e; --accent-soft:rgba(124,183,137,0.16);
+    --cool:#7fb3ca; --cool-soft:rgba(127,179,202,0.16);
+    --warn:#dba25c; --warn-soft:rgba(219,162,92,0.16);
+    --danger:#e08b77; --danger-soft:rgba(224,139,119,0.16);
+    --shadow: 0 14px 34px -14px rgba(0,0,0,0.6);
+    --shadow-sm: 0 2px 10px -2px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12140f; --surface:#1b1f16; --surface-sunken:#262c1d; --line:#2c331f;
+  --ink:#ece7db; --ink-soft:#a7ac99; --ink-faint:#767c67;
+  --accent:#7cb789; --accent-ink:#0d150e; --accent-soft:rgba(124,183,137,0.16);
+  --cool:#7fb3ca; --cool-soft:rgba(127,179,202,0.16);
+  --warn:#dba25c; --warn-soft:rgba(219,162,92,0.16);
+  --danger:#e08b77; --danger-soft:rgba(224,139,119,0.16);
+  --shadow: 0 14px 34px -14px rgba(0,0,0,0.6);
+  --shadow-sm: 0 2px 10px -2px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body);
+  padding-inline:16px; padding-block:28px 60px; line-height:1.5;
+}
+h1,h2,h3{font-family:var(--font-display); text-wrap:balance; margin:0;}
+button{font-family:inherit;}
+
+/* ==========================================================================
+   Pitch / intro
+   ========================================================================== */
+.pitch{max-width:640px; margin:0 auto 36px;}
+.pitch-eyebrow{
+  display:block; font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:10px;
+}
+.pitch h1{font-size:clamp(1.5rem,4.5vw,2.05rem); font-weight:800; line-height:1.2; margin-bottom:12px;}
+.pitch p.lead{color:var(--ink-soft); font-size:1rem; max-width:60ch; margin-bottom:20px;}
+.pitch-changes{
+  list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;
+}
+.pitch-changes li{
+  display:flex; gap:12px; padding:12px 14px; background:var(--surface); border:1px solid var(--line);
+  border-radius:12px; font-size:0.88rem; color:var(--ink);
+}
+.pitch-changes li b{color:var(--ink); font-weight:600;}
+.pitch-changes li .was{color:var(--ink-faint); font-weight:400;}
+.pitch-changes .num{
+  font-family:var(--font-display); font-weight:700; color:var(--accent); flex:0 0 auto;
+  font-variant-numeric:tabular-nums; font-size:0.8rem; padding-top:1px;
+}
+.pitch-hint{margin-top:18px; font-size:0.82rem; color:var(--ink-faint);}
+.pitch-hint code{background:var(--surface-sunken); padding:1px 6px; border-radius:6px; font-size:0.78rem;}
+
+/* ==========================================================================
+   Device frame
+   ========================================================================== */
+.device-wrap{display:flex; flex-direction:column; align-items:center; gap:12px;}
+.device-label{font-size:0.78rem; color:var(--ink-faint); font-weight:500;}
+.mode-switch{display:flex; background:var(--surface-sunken); border-radius:11px; padding:3px; gap:2px;}
+.mode-switch button{
+  border:none; background:none; padding:8px 16px; border-radius:9px; font-size:0.82rem; font-weight:600;
+  color:var(--ink-soft); cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+}
+.mode-switch button .icon{width:16px; height:16px;}
+.mode-switch button.active{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm);}
+.device-frame{
+  width:min(412px, 100%); height:min(760px, 82vh); position:relative; overflow:hidden;
+  background:var(--bg); border:1px solid var(--line); border-radius:26px; box-shadow:var(--shadow);
+  container-type:inline-size; container-name:app; transition:width 0.28s cubic-bezier(.32,.72,0,1);
+}
+.device-frame.is-desktop{width:min(1120px, 100%); border-radius:16px;}
+.screen{position:absolute; inset:0; display:flex; flex-direction:column;}
+.screen[hidden]{display:none;}
+.tab-panel{flex:1 1 auto; display:flex; flex-direction:column; min-height:0;}
+.rail-mark{display:none;}
+.desktop-action{display:none;}
+
+/* -------- top bar -------- */
+.topbar{
+  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:16px 18px 10px; background:var(--bg);
+}
+.topbar h2{font-size:1.15rem; font-weight:700;}
+.topbar .icon-btn{color:var(--ink-soft);}
+.topbar .text-btn{
+  border:none; background:none; color:var(--accent); font-weight:600; font-size:0.85rem; cursor:pointer; padding:6px 4px;
+}
+
+/* -------- content -------- */
+.content{flex:1 1 auto; overflow-y:auto; padding:4px 18px 100px; -webkit-overflow-scrolling:touch;}
+.content::-webkit-scrollbar{width:0;}
+
+/* -------- icons -------- */
+.icon{width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; display:block;}
+.icon-sm{width:17px; height:17px;}
+.icon-btn{
+  border:none; background:none; cursor:pointer; padding:6px; border-radius:10px; display:inline-flex;
+  align-items:center; justify-content:center; color:var(--ink);
+}
+.icon-btn:hover{background:var(--surface-sunken);}
+
+/* -------- bottom nav -------- */
+.bottomnav{
+  flex:0 0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:2px;
+  background:var(--surface); border-top:1px solid var(--line); padding:8px 6px 10px;
+}
+.navbtn{
+  border:none; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:4px 2px; border-radius:12px; color:var(--ink-faint); font-family:var(--font-display);
+  font-size:0.62rem; font-weight:600; letter-spacing:0.01em;
+}
+.navbtn .icon{width:21px; height:21px;}
+.navbtn.active{color:var(--accent);}
+
+/* -------- FAB -------- */
+.fab{
+  position:absolute; right:18px; bottom:88px; width:54px; height:54px; border-radius:17px;
+  background:var(--accent); color:var(--accent-ink); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-sm); z-index:5;
+}
+.fab .icon{width:24px; height:24px;}
+
+/* ==========================================================================
+   Shared UI bits
+   ========================================================================== */
+.chips{display:flex; gap:8px; overflow-x:auto; padding:6px 0 14px; margin:0 -2px;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{
+  flex:0 0 auto; border:1px solid var(--line); background:var(--surface); color:var(--ink-soft);
+  border-radius:999px; padding:7px 14px; font-size:0.82rem; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.chip.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+
+.search-row{padding:6px 0 4px;}
+.search-row[hidden]{display:none;}
+.search-input{
+  width:100%; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); font-size:0.9rem;
+}
+.search-input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+.alert-strip{
+  display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:12px; margin-bottom:14px;
+  background:var(--warn-soft); border-left:3px solid var(--warn); color:var(--ink); font-size:0.85rem; font-weight:500;
+}
+
+.section-title{
+  font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--ink-faint);
+  margin:18px 0 8px;
+}
+.section-title:first-child{margin-top:2px;}
+
+/* item row (despensa / compra) */
+.rows{display:flex; flex-direction:column; gap:7px;}
+.item-row{
+  width:100%; display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:13px;
+  background:var(--surface); border:1px solid var(--line); text-align:left; cursor:pointer; color:var(--ink);
+}
+.mono{
+  flex:0 0 auto; width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; font-size:0.95rem;
+}
+.mono-warm{background:var(--accent-soft); color:var(--accent);}
+.mono-cool{background:var(--cool-soft); color:var(--cool);}
+.item-main{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px;}
+.item-name{font-weight:600; font-size:0.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.item-meta{font-size:0.78rem; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+.status-pill{
+  flex:0 0 auto; font-size:0.7rem; font-weight:700; padding:4px 9px; border-radius:999px; white-space:nowrap;
+}
+.status-pill.danger{background:var(--danger-soft); color:var(--danger);}
+.status-pill.warn{background:var(--warn-soft); color:var(--warn);}
+.status-pill.neutral{background:var(--surface-sunken); color:var(--ink-faint); font-weight:600;}
+
+/* recetas */
+.recipe-card{
+  padding:13px 14px; border-radius:14px; background:var(--surface); border:1px solid var(--line);
+  cursor:pointer; margin-bottom:9px;
+}
+.recipe-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:4px;}
+.recipe-name{font-weight:700; font-size:0.98rem;}
+.recipe-cat{font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--accent);}
+.recipe-meta{font-size:0.78rem; color:var(--ink-soft); margin-bottom:6px; font-variant-numeric:tabular-nums;}
+.recipe-desc{font-size:0.82rem; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+/* menu semanal */
+.daystrip{display:flex; gap:7px; overflow-x:auto; padding:6px 0 16px; margin:0 -2px;}
+.daystrip::-webkit-scrollbar{display:none;}
+.daychip{
+  flex:0 0 auto; width:50px; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:9px 4px; border-radius:14px; border:1px solid var(--line); background:var(--surface); cursor:pointer;
+}
+.daychip .dow{font-size:0.65rem; font-weight:700; text-transform:uppercase; color:var(--ink-faint); letter-spacing:0.03em;}
+.daychip .num{font-family:var(--font-display); font-weight:700; font-size:1rem; color:var(--ink); font-variant-numeric:tabular-nums;}
+.daychip.today{border-color:var(--accent);}
+.daychip.active{background:var(--accent);}
+.daychip.active .dow, .daychip.active .num{color:var(--accent-ink);}
+
+.meal-row{
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:14px 14px; border-radius:13px; background:var(--surface); border:1px solid var(--line);
+  cursor:pointer; margin-bottom:8px; text-align:left; color:var(--ink);
+}
+.meal-label{font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); display:block; margin-bottom:3px;}
+.meal-value{font-weight:600; font-size:0.92rem;}
+.meal-value.empty{color:var(--ink-faint); font-weight:500;}
+.meal-row .icon{color:var(--ink-faint); flex:0 0 auto;}
+
+.btn{
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); font-weight:600; font-size:0.88rem;
+  padding:12px 16px; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-block{width:100%;}
+.btn-primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.btn-ghost{border-color:transparent; background:none; color:var(--accent);}
+
+/* compra */
+.compra-add{display:flex; gap:8px; margin-bottom:14px;}
+.compra-add input[type="text"]{flex:1 1 auto; min-width:0;}
+.compra-add input[type="number"]{width:76px;}
+.compra-add input{padding:10px 12px; border-radius:11px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:0.85rem;}
+.compra-add button{flex:0 0 auto; width:40px; height:40px; border-radius:11px; background:var(--accent); color:var(--accent-ink); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+
+.check-row{display:flex; align-items:center; gap:11px;}
+.checkdot{
+  flex:0 0 auto; width:22px; height:22px; border-radius:7px; border:1.8px solid var(--line); background:var(--surface);
+  display:flex; align-items:center; justify-content:center; color:var(--accent-ink); cursor:pointer;
+}
+.item-row.done{opacity:0.5;}
+.item-row.done .checkdot{background:var(--accent); border-color:var(--accent);}
+.item-row.done .item-name{text-decoration:line-through;}
+.origin-pill{
+  flex:0 0 auto; font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;
+  background:var(--surface-sunken); color:var(--ink-faint); padding:3px 8px; border-radius:999px;
+}
+.row-delete{flex:0 0 auto; background:none; border:none; color:var(--ink-faint); cursor:pointer; padding:4px;}
+.row-delete:hover{color:var(--danger);}
+.compra-foot{display:flex; justify-content:flex-end; padding-top:6px;}
+
+/* ajustes */
+.settings-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:15px 15px 16px; margin-bottom:12px;
+}
+.settings-card h3{font-size:0.92rem; font-weight:700; margin-bottom:8px;}
+.settings-card p{font-size:0.82rem; color:var(--ink-soft); margin:0 0 10px;}
+.settings-actions{display:flex; gap:8px; flex-wrap:wrap;}
+.settings-actions .btn{padding:9px 13px; font-size:0.82rem;}
+.segmented{display:flex; background:var(--surface-sunken); border-radius:11px; padding:3px; gap:2px;}
+.segmented button{
+  flex:1; border:none; background:none; padding:8px 4px; border-radius:9px; font-size:0.8rem; font-weight:600;
+  color:var(--ink-soft); cursor:pointer;
+}
+.segmented button.active{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm);}
+.tag-list{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px;}
+.tag{
+  display:flex; align-items:center; gap:6px; background:var(--surface-sunken); color:var(--ink); font-size:0.82rem;
+  font-weight:500; padding:6px 8px 6px 12px; border-radius:999px;
+}
+.tag button{background:none; border:none; color:var(--ink-faint); cursor:pointer; display:flex; padding:2px;}
+.mini-form{display:flex; gap:7px;}
+.mini-form input, .mini-form select{
+  padding:9px 11px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:0.82rem; min-width:0;
+}
+.mini-form input[name="nombre"]{flex:1;}
+.mini-form button{flex:0 0 auto; background:var(--accent); color:var(--accent-ink); border:none; border-radius:10px; padding:0 13px; font-weight:700; cursor:pointer;}
+.catalog-row{display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--line); font-size:0.85rem;}
+.catalog-row:last-of-type{border-bottom:none;}
+.catalog-name{flex:1; font-weight:600;}
+.catalog-meta{color:var(--ink-faint); font-size:0.76rem;}
+.exit-link{
+  display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:none; border:none;
+  color:var(--ink-faint); font-size:0.84rem; font-weight:600; padding:12px; cursor:pointer;
+}
+
+/* -------- landing -------- */
+.landing{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 30px; gap:0;}
+.landing-mark{font-family:var(--font-display); font-weight:800; font-size:1.5rem; letter-spacing:-0.01em; margin-bottom:6px;}
+.landing-mark span{color:var(--accent);}
+.landing-tag{color:var(--ink-soft); font-size:0.92rem; max-width:30ch; margin-bottom:34px;}
+.landing .btn-primary{padding:14px 30px; font-size:0.95rem; margin-bottom:16px;}
+.landing-link{background:none; border:none; color:var(--ink-soft); font-size:0.84rem; font-weight:600; padding:8px; cursor:pointer;}
+.landing-link[disabled]{color:var(--ink-faint); cursor:default;}
+.landing-foot{margin-top:auto; padding-top:30px; font-size:0.72rem; color:var(--ink-faint); border-top:1px solid var(--line); width:100%;}
+
+/* -------- bottom sheet -------- */
+.sheet-backdrop{
+  position:absolute; inset:0; background:rgba(15,17,12,0.45); display:flex; align-items:flex-end; z-index:20;
+  opacity:0; pointer-events:none; transition:opacity 0.18s ease;
+}
+.sheet-backdrop.open{opacity:1; pointer-events:auto;}
+.sheet{
+  width:100%; background:var(--surface); border-radius:20px 20px 0 0; padding:10px 20px 22px; box-shadow:var(--shadow);
+  transform:translateY(100%); transition:transform 0.22s cubic-bezier(.32,.72,0,1); max-height:88%; overflow-y:auto;
+}
+.sheet-backdrop.open .sheet{transform:translateY(0);}
+.sheet-handle{width:36px; height:4px; border-radius:99px; background:var(--line); margin:2px auto 14px;}
+.sheet h3{font-size:1.02rem; font-weight:700; margin-bottom:14px;}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:12px;}
+.field label{font-size:0.76rem; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em;}
+.sheet input, .sheet select, .sheet textarea{
+  padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink);
+  font-size:0.9rem; font-family:inherit; width:100%;
+}
+.sheet textarea{resize:vertical;}
+.field-row{display:flex; gap:10px;}
+.field-row .field{flex:1;}
+.sheet-actions{display:flex; gap:10px; margin-top:16px;}
+.sheet-actions .btn{flex:1;}
+
+.ing-editor-head{display:flex; align-items:center; justify-content:space-between; margin:16px 0 9px;}
+.ing-editor-head span{font-size:0.76rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-soft);}
+.btn-add-ing{
+  border:1px solid var(--line); background:none; color:var(--accent); font-weight:600; font-size:0.78rem;
+  padding:6px 11px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+}
+.ing-row{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+.ing-row select{flex:1.6; min-width:0; width:auto;}
+.ing-row input{flex:1; min-width:0; width:auto;}
+.ing-row-remove{flex:0 0 auto; background:none; border:none; color:var(--ink-faint); cursor:pointer; padding:6px;}
+.ing-row-remove:hover{color:var(--danger);}
+
+/* -------- toast -------- */
+.toast{
+  position:absolute; left:50%; top:14px; transform:translate(-50%,-140%); background:var(--ink); color:var(--bg);
+  font-size:0.82rem; font-weight:600; padding:10px 16px; border-radius:999px; z-index:30; transition:transform 0.25s ease;
+  white-space:nowrap;
+}
+.toast.show{transform:translate(-50%,0);}
+
+/* ==========================================================================
+   Semana completa (solo escritorio)
+   ========================================================================== */
+#week-grid-view{display:none;}
+.week-grid{display:grid; grid-template-columns:78px repeat(7, 1fr); gap:7px; font-size:0.82rem;}
+.wg-cell{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:9px 8px;
+  min-height:44px; display:flex; align-items:center; cursor:pointer; color:var(--ink);
+}
+.wg-cell:hover{border-color:var(--accent);}
+.wg-corner{background:transparent; border:none; cursor:default;}
+.wg-daylabel{
+  flex-direction:column; align-items:center; justify-content:center; gap:1px; cursor:default;
+  font-family:var(--font-display); font-weight:700;
+}
+.wg-daylabel .dow{font-size:0.64rem; text-transform:uppercase; color:var(--ink-faint); font-weight:700;}
+.wg-daylabel .num{font-size:0.9rem; color:var(--ink); font-variant-numeric:tabular-nums;}
+.wg-daylabel.today{border-color:var(--accent); background:var(--accent-soft);}
+.wg-mealcell{
+  color:var(--ink-faint); font-weight:700; justify-content:flex-start; cursor:default;
+  background:transparent; border:none; padding-left:2px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;
+}
+.wg-value{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; font-size:0.8rem;}
+.wg-value.empty{color:var(--ink-faint); font-weight:500;}
+
+/* ==========================================================================
+   Escritorio (contenedor ancho): el mismo sistema, otra densidad
+   ========================================================================== */
+@container app (min-width: 760px){
+  #screen-app{flex-direction:row;}
+  .bottomnav{
+    display:flex; flex-direction:column; align-items:center; width:100px; height:100%;
+    border-top:none; border-right:1px solid var(--line); padding:22px 10px 16px; gap:8px; order:-1;
+  }
+  .rail-mark{
+    display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:9px;
+    background:var(--accent-soft); color:var(--accent); font-family:var(--font-display); font-weight:800;
+    font-size:0.7rem; margin-bottom:12px;
+  }
+  .navbtn:hover{background:var(--surface-sunken);}
+
+  .fab{display:none;}
+  .desktop-action{display:inline-flex;}
+
+  .search-row{display:block;}
+  #btn-toggle-search{display:none;}
+
+  .topbar{padding:24px 40px 14px;}
+  .content{max-width:960px; margin:0 auto; padding:6px 40px 60px;}
+
+  #rows-despensa{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;}
+  #rows-recetas{display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;}
+  .recipe-card{margin-bottom:0;}
+
+  #agenda-view{display:none;}
+  #week-grid-view{display:block;}
+
+  #btn-generar-lista{width:auto; display:inline-flex;}
+
+  .tab-panel[data-panel="ajustes"] .content{
+    display:grid; grid-template-columns:1fr 1fr; gap:16px; align-content:start;
+  }
+  .tab-panel[data-panel="ajustes"] .content .exit-link{grid-column:1 / -1;}
+
+  .sheet-backdrop{align-items:center; justify-content:center;}
+  .sheet{width:min(480px, 88%); border-radius:18px; transform:translateY(10px) scale(0.98);}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .sheet, .sheet-backdrop, .toast, .device-frame{transition:none;}
+}
+
+@media (max-width:400px){
+  .device-frame{border-radius:0; border-left:none; border-right:none;}
+  body{padding-inline:0;}
+  .pitch{padding-inline:16px;}
+}
+</style>
+
+<!-- ============================================================
+     Icon defs
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="ic-pantry" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="3" rx="1"/><path d="M7.5 7 6.5 19a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2L16.5 7Z"/><line x1="6.9" y1="12.4" x2="17.1" y2="12.4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.5c-1.5-1.3-3.6-1.9-6.2-1.9v13.4c2.6 0 4.7.6 6.2 1.9 1.5-1.3 3.6-1.9 6.2-1.9V4.6c-2.6 0-4.7.6-6.2 1.9Z"/><line x1="12" y1="6.5" x2="12" y2="19.9"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="8" y1="3.4" x2="8" y2="7"/><line x1="16" y1="3.4" x2="16" y2="7"/></symbol>
+  <symbol id="ic-cart" viewBox="0 0 24 24"><path d="M4 5h2l1.7 9.7a2 2 0 0 0 2 1.7h6.8a2 2 0 0 0 2-1.6L20 8H7.2"/><circle cx="10" cy="19.4" r="1.3"/><circle cx="16.6" cy="19.4" r="1.3"/></symbol>
+  <symbol id="ic-sliders" viewBox="0 0 24 24"><line x1="5" y1="7" x2="19" y2="7"/><circle cx="9.5" cy="7" r="1.7"/><line x1="5" y1="12.5" x2="19" y2="12.5"/><circle cx="15.5" cy="12.5" r="1.7"/><line x1="5" y1="18" x2="19" y2="18"/><circle cx="11" cy="18" r="1.7"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="10.3" cy="10.3" r="6"/><line x1="15" y1="15" x2="20" y2="20"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-chev-left" viewBox="0 0 24 24"><path d="M14.5 5 8 12l6.5 7"/></symbol>
+  <symbol id="ic-chev-right" viewBox="0 0 24 24"><path d="M9.5 5 16 12l-6.5 7"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M5 12.5 10 17l9-10"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7V5.4A1.4 1.4 0 0 1 10.4 4h3.2A1.4 1.4 0 0 1 15 5.4V7"/><path d="M7 7l1 12.4A1.5 1.5 0 0 0 9.5 21h5a1.5 1.5 0 0 0 1.5-1.6L17 7"/></symbol>
+  <symbol id="ic-mobile" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><line x1="10.3" y1="18.3" x2="13.7" y2="18.3"/></symbol>
+  <symbol id="ic-desktop" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="1.5"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="16.5" x2="12" y2="20"/></symbol>
+</svg>
+
+<!-- ============================================================
+     Pitch
+     ============================================================ -->
+<div class="pitch">
+  <span class="pitch-eyebrow">Propuesta de interfaz — v2</span>
+  <h1>Un enfoque de app de móvil, no de panel de escritorio</h1>
+  <p class="lead">La interfaz actual usa el patrón de un dashboard de oficina (menú lateral, tablas, modales centrados) adaptado luego a pantalla pequeña. Esta propuesta parte al revés: se diseña primero para el móvil, que es donde de verdad se usa —de pie en la cocina, con una mano libre— y ese mismo diseño se estira, sin cambiar de esquema, a pantallas más grandes.</p>
+  <ul class="pitch-changes">
+    <li><span class="num">01</span><span><b>Navegación inferior de 5 pestañas</b> en vez de menú lateral. <span class="was">El contenido queda a un pulgar, sin abrir ni cerrar nada.</span></span></li>
+    <li><span class="num">02</span><span><b>Botón flotante (+)</b> para la acción principal de cada pantalla. <span class="was">Antes era un botón en una barra de herramientas, a veces fuera del alcance del pulgar.</span></span></li>
+    <li><span class="num">03</span><span><b>Chips deslizables</b> en vez de listas desplegables (<code>&lt;select&gt;</code>) para filtrar por ubicación o categoría.</span></li>
+    <li><span class="num">04</span><span><b>El menú semanal se navega día a día</b> con una tira de fechas. <span class="was">La tabla de 7 columnas obligaba a hacer scroll horizontal en el móvil.</span></span></li>
+    <li><span class="num">05</span><span><b>Los formularios aparecen como hojas inferiores</b> que suben desde abajo. <span class="was">Los modales centrados quedaban descolgados en una pantalla alta y estrecha.</span></span></li>
+    <li><span class="num">06</span><span><b>Iniciales de color</b> en vez de emoji para identificar productos: mismo tamaño, mismo estilo, y el color indica si es de frío o de despensa.</span></li>
+    <li><span class="num">07</span><span><b>"Salir" se traslada a Ajustes.</b> <span class="was">Antes competía por sitio con las 5 secciones principales dentro del propio menú.</span></span></li>
+  </ul>
+  <p class="pitch-hint">Prototipo navegable: usa las pestañas de abajo, toca un producto o el botón <b>+</b>, prueba el interruptor de tema dentro de <b>Ajustes</b>, y cambia entre <b>Móvil</b> y <b>Escritorio</b> justo encima de la maqueta para ver cómo se reparte el mismo diseño en una pantalla ancha.</p>
+</div>
+
+<!-- ============================================================
+     Device mock
+     ============================================================ -->
+<div class="device-wrap">
+  <div class="mode-switch" id="mode-switch">
+    <button data-mode="movil" class="active"><svg class="icon"><use href="#ic-mobile"/></svg>Móvil</button>
+    <button data-mode="escritorio"><svg class="icon"><use href="#ic-desktop"/></svg>Escritorio</button>
+  </div>
+  <span class="device-label" id="device-label">Vista de la app · 412 px</span>
+  <div class="device-frame">
+
+    <!-- LANDING -->
+    <section class="screen" id="screen-landing">
+      <div class="landing">
+        <div class="landing-mark">Despensa<span>Online</span></div>
+        <p class="landing-tag">Tu despensa, tus recetas y la compra, en un solo sitio.</p>
+        <button class="btn btn-primary" id="btn-empezar">Empezar</button>
+        <button class="landing-link" id="btn-cargar-archivo">Ya tengo un archivo → cargarlo</button>
+        <button class="landing-link" disabled>Sincronización en la nube (pronto)</button>
+        <p class="landing-foot">Los datos se guardan en este dispositivo. Nada sale de aquí sin que tú lo decidas.</p>
+      </div>
+    </section>
+
+    <!-- APP -->
+    <section class="screen" id="screen-app" hidden>
+
+      <!-- DESPENSA -->
+      <div class="tab-panel" data-panel="despensa">
+        <div class="topbar">
+          <h2>Despensa</h2>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn btn-primary desktop-action" id="fab-despensa-desktop"><svg class="icon icon-sm"><use href="#ic-plus"/></svg>Añadir</button>
+            <button class="icon-btn" id="btn-toggle-search" aria-label="Buscar"><svg class="icon"><use href="#ic-search"/></svg></button>
+          </div>
+        </div>
+        <div class="content">
+          <div class="search-row" id="search-row" hidden>
+            <input class="search-input" placeholder="Buscar producto…" id="search-despensa">
+          </div>
+          <div class="chips" data-group="ubicacion">
+            <button class="chip active" data-value="todas">Todas</button>
+            <button class="chip" data-value="nevera">Nevera</button>
+            <button class="chip" data-value="congelador">Congelador</button>
+            <button class="chip" data-value="despensa">Despensa</button>
+            <button class="chip" data-value="trastero">Trastero</button>
+          </div>
+          <div class="alert-strip">2 productos necesitan atención esta semana</div>
+          <div class="rows" id="rows-despensa">
+            <button class="item-row" data-ubicacion="nevera"><span class="mono mono-cool">Y</span><span class="item-main"><span class="item-name">Yogures naturales</span><span class="item-meta">Nevera · 8 ud</span></span><span class="status-pill danger">Caducó hace 2 días</span></button>
+            <button class="item-row" data-ubicacion="nevera"><span class="mono mono-cool">L</span><span class="item-main"><span class="item-name">Leche entera</span><span class="item-meta">Nevera · 2 l</span></span><span class="status-pill warn">Caduca en 2 días</span></button>
+            <button class="item-row" data-ubicacion="congelador"><span class="mono mono-cool">F</span><span class="item-main"><span class="item-name">Filetes de pollo</span><span class="item-meta">Congelador · 600 g</span></span><span class="status-pill neutral">30 sept</span></button>
+            <button class="item-row" data-ubicacion="despensa"><span class="mono mono-warm">A</span><span class="item-main"><span class="item-name">Arroz redondo</span><span class="item-meta">Despensa · 1 kg</span></span><span class="status-pill neutral">Sin caducidad</span></button>
+            <button class="item-row" data-ubicacion="despensa"><span class="mono mono-warm">G</span><span class="item-main"><span class="item-name">Garbanzos cocidos</span><span class="item-meta">Despensa · 3 botes</span></span><span class="status-pill neutral">mar 2027</span></button>
+            <button class="item-row" data-ubicacion="despensa"><span class="mono mono-warm">T</span><span class="item-main"><span class="item-name">Tomate frito</span><span class="item-meta">Despensa · 2 botes</span></span><span class="status-pill neutral">13 oct</span></button>
+            <button class="item-row" data-ubicacion="trastero"><span class="mono mono-warm">P</span><span class="item-main"><span class="item-name">Papel de aluminio</span><span class="item-meta">Trastero · 1 ud</span></span><span class="status-pill neutral">Sin caducidad</span></button>
+          </div>
+        </div>
+        <button class="fab" id="fab-despensa" aria-label="Añadir a la despensa"><svg class="icon"><use href="#ic-plus"/></svg></button>
+      </div>
+
+      <!-- RECETAS -->
+      <div class="tab-panel" data-panel="recetas" hidden>
+        <div class="topbar">
+          <h2>Recetas</h2>
+          <button class="btn btn-primary desktop-action" id="fab-recetas-desktop"><svg class="icon icon-sm"><use href="#ic-plus"/></svg>Nueva receta</button>
+        </div>
+        <div class="content">
+          <div class="chips" data-group="categoria">
+            <button class="chip active" data-value="todas">Todas</button>
+            <button class="chip" data-value="desayuno">Desayuno</button>
+            <button class="chip" data-value="comida">Comida</button>
+            <button class="chip" data-value="cena">Cena</button>
+            <button class="chip" data-value="postre">Postre</button>
+            <button class="chip" data-value="snack">Snack</button>
+          </div>
+          <div id="rows-recetas">
+            <div class="recipe-card" data-categoria="comida"><div class="recipe-top"><span class="recipe-name">Tortilla de patatas</span><span class="recipe-cat">Comida</span></div><div class="recipe-meta">40 min · 4 comensales</div><div class="recipe-desc">Patata, cebolla, huevo, aceite de oliva</div></div>
+            <div class="recipe-card" data-categoria="desayuno"><div class="recipe-top"><span class="recipe-name">Porridge de avena</span><span class="recipe-cat">Desayuno</span></div><div class="recipe-meta">10 min · 1 comensal</div><div class="recipe-desc">Avena, leche, plátano, canela</div></div>
+            <div class="recipe-card" data-categoria="cena"><div class="recipe-top"><span class="recipe-name">Crema de calabaza</span><span class="recipe-cat">Cena</span></div><div class="recipe-meta">30 min · 2 comensales</div><div class="recipe-desc">Calabaza, cebolla, caldo, nata</div></div>
+            <div class="recipe-card" data-categoria="comida"><div class="recipe-top"><span class="recipe-name">Ensalada de garbanzos</span><span class="recipe-cat">Comida</span></div><div class="recipe-meta">15 min · 2 comensales</div><div class="recipe-desc">Garbanzos, tomate, cebolleta, atún</div></div>
+            <div class="recipe-card" data-categoria="postre"><div class="recipe-top"><span class="recipe-name">Bizcocho de yogur</span><span class="recipe-cat">Postre</span></div><div class="recipe-meta">45 min · 8 comensales</div><div class="recipe-desc">Yogur, huevo, harina, azúcar</div></div>
+          </div>
+        </div>
+        <button class="fab" id="fab-recetas" aria-label="Nueva receta"><svg class="icon"><use href="#ic-plus"/></svg></button>
+      </div>
+
+      <!-- MENU -->
+      <div class="tab-panel" data-panel="menu" hidden>
+        <div class="topbar"><h2>Menú semanal</h2><button class="text-btn" id="btn-hoy">Hoy</button></div>
+        <div class="content">
+          <div id="agenda-view">
+            <div class="daystrip" id="daystrip"></div>
+            <div id="agenda"></div>
+          </div>
+          <div id="week-grid-view">
+            <div class="week-grid" id="week-grid"></div>
+          </div>
+          <button class="btn btn-block" id="btn-generar-lista" style="margin-top:16px;"><svg class="icon icon-sm"><use href="#ic-cart"/></svg>Generar lista de la compra</button>
+        </div>
+      </div>
+
+      <!-- COMPRA -->
+      <div class="tab-panel" data-panel="compra" hidden>
+        <div class="topbar"><h2>Lista de la compra</h2></div>
+        <div class="content">
+          <form class="compra-add" id="form-compra-add">
+            <input type="text" placeholder="Producto" id="in-compra-nombre" required>
+            <input type="number" placeholder="Cant." id="in-compra-cantidad" min="1" value="1">
+            <button type="submit" aria-label="Añadir"><svg class="icon icon-sm"><use href="#ic-plus"/></svg></button>
+          </form>
+          <div class="chips" data-group="origen">
+            <button class="chip active" data-value="todo">Todo</button>
+            <button class="chip" data-value="menu">Del menú</button>
+            <button class="chip" data-value="mano">Manual</button>
+          </div>
+          <div class="rows" id="rows-compra">
+            <div class="item-row" data-origen="menu"><span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name">Calabaza</span><span class="item-meta">1 ud</span></span></span><span class="origin-pill">Menú</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+            <div class="item-row" data-origen="menu"><span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name">Garbanzos cocidos</span><span class="item-meta">2 botes</span></span></span><span class="origin-pill">Menú</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+            <div class="item-row" data-origen="menu"><span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name">Avena</span><span class="item-meta">200 g</span></span></span><span class="origin-pill">Menú</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+            <div class="item-row done" data-origen="mano"><span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name">Papel de aluminio</span><span class="item-meta">1 ud</span></span></span><span class="origin-pill">A mano</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+            <div class="item-row" data-origen="mano"><span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name">Detergente</span><span class="item-meta">1 ud</span></span></span><span class="origin-pill">A mano</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+          </div>
+          <div class="compra-foot"><button class="landing-link" id="btn-quitar-comprados" style="color:var(--ink-soft);">Quitar comprados</button></div>
+        </div>
+      </div>
+
+      <!-- AJUSTES -->
+      <div class="tab-panel" data-panel="ajustes" hidden>
+        <div class="topbar"><h2>Ajustes</h2></div>
+        <div class="content">
+          <div class="settings-card">
+            <h3>Modo de datos</h3>
+            <p>Local · guardado en este dispositivo</p>
+            <div class="settings-actions">
+              <button class="btn">Descargar copia</button>
+              <button class="btn">Cargar otro archivo</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Tema</h3>
+            <div class="segmented" id="theme-switch">
+              <button data-theme="light">Claro</button>
+              <button data-theme="dark">Oscuro</button>
+              <button data-theme="" class="active">Sistema</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Ubicaciones de la despensa</h3>
+            <div class="tag-list" id="tag-ubicaciones">
+              <span class="tag">Nevera<button aria-label="Eliminar"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button></span>
+              <span class="tag">Congelador<button aria-label="Eliminar"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button></span>
+              <span class="tag">Despensa<button aria-label="Eliminar"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button></span>
+              <span class="tag">Trastero<button aria-label="Eliminar"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button></span>
+            </div>
+            <form class="mini-form" id="form-ubicacion">
+              <input type="text" name="nombre" placeholder="Nueva ubicación">
+              <button type="submit">Añadir</button>
+            </form>
+          </div>
+
+          <div class="settings-card">
+            <h3>Catálogo de productos</h3>
+            <div id="catalogo-list">
+              <div class="catalog-row"><span class="catalog-name">Leche entera</span><span class="catalog-meta">Lácteos · l</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+              <div class="catalog-row"><span class="catalog-name">Arroz redondo</span><span class="catalog-meta">Cereal · kg</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+              <div class="catalog-row"><span class="catalog-name">Tomate frito</span><span class="catalog-meta">Conserva · ud</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button></div>
+            </div>
+          </div>
+
+          <button class="exit-link" id="btn-salir">Salir y volver al inicio</button>
+        </div>
+      </div>
+
+      <div class="bottomnav">
+        <div class="rail-mark">DO</div>
+        <button class="navbtn active" data-tab="despensa"><svg class="icon"><use href="#ic-pantry"/></svg>Despensa</button>
+        <button class="navbtn" data-tab="recetas"><svg class="icon"><use href="#ic-book"/></svg>Recetas</button>
+        <button class="navbtn" data-tab="menu"><svg class="icon"><use href="#ic-calendar"/></svg>Menú</button>
+        <button class="navbtn" data-tab="compra"><svg class="icon"><use href="#ic-cart"/></svg>Compra</button>
+        <button class="navbtn" data-tab="ajustes"><svg class="icon"><use href="#ic-sliders"/></svg>Ajustes</button>
+      </div>
+
+      <!-- SHEET -->
+      <div class="sheet-backdrop" id="sheet-backdrop">
+        <div class="sheet" id="sheet">
+          <div class="sheet-handle"></div>
+          <div id="sheet-body"></div>
+        </div>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  var device = document.querySelector('.device-frame');
+  var deviceLabel = document.getElementById('device-label');
+
+  // ---------- modo móvil / escritorio ----------
+  var modeSwitch = document.getElementById('mode-switch');
+  modeSwitch.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(!btn) return;
+    modeSwitch.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    var desktop = btn.dataset.mode === 'escritorio';
+    device.classList.toggle('is-desktop', desktop);
+    deviceLabel.textContent = desktop ? 'Vista de la app · hasta 1120 px' : 'Vista de la app · 412 px';
+  });
+
+  // ---------- landing <-> app ----------
+  var screenLanding = document.getElementById('screen-landing');
+  var screenApp = document.getElementById('screen-app');
+  function goApp(){ screenLanding.hidden = true; screenApp.hidden = false; }
+  function goLanding(){ screenApp.hidden = true; screenLanding.hidden = false; }
+  document.getElementById('btn-empezar').addEventListener('click', goApp);
+  document.getElementById('btn-cargar-archivo').addEventListener('click', goApp);
+  document.getElementById('btn-salir').addEventListener('click', goLanding);
+
+  // ---------- bottom nav ----------
+  var navBtns = document.querySelectorAll('.navbtn');
+  var panels = document.querySelectorAll('.tab-panel');
+  navBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      navBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = btn.dataset.tab;
+      panels.forEach(function(p){ p.hidden = (p.dataset.panel !== tab); });
+    });
+  });
+
+  // ---------- search toggle ----------
+  var searchRow = document.getElementById('search-row');
+  document.getElementById('btn-toggle-search').addEventListener('click', function(){
+    searchRow.hidden = !searchRow.hidden;
+    if(!searchRow.hidden){ document.getElementById('search-despensa').focus(); }
+  });
+  document.getElementById('search-despensa').addEventListener('input', function(e){
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#rows-despensa .item-row').forEach(function(row){
+      var name = row.querySelector('.item-name').textContent.toLowerCase();
+      row.style.display = name.indexOf(q) === -1 ? 'none' : '';
+    });
+  });
+
+  // ---------- chip filters ----------
+  document.querySelectorAll('.chips').forEach(function(group){
+    group.addEventListener('click', function(e){
+      var chip = e.target.closest('.chip');
+      if(!chip) return;
+      group.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var value = chip.dataset.value;
+      var key = group.dataset.group;
+      if(key === 'ubicacion'){
+        document.querySelectorAll('#rows-despensa .item-row').forEach(function(row){
+          row.style.display = (value === 'todas' || row.dataset.ubicacion === value) ? '' : 'none';
+        });
+      } else if(key === 'categoria'){
+        document.querySelectorAll('#rows-recetas .recipe-card').forEach(function(card){
+          card.style.display = (value === 'todas' || card.dataset.categoria === value) ? '' : 'none';
+        });
+      } else if(key === 'origen'){
+        document.querySelectorAll('#rows-compra .item-row').forEach(function(row){
+          row.style.display = (value === 'todo' || row.dataset.origen === value) ? '' : 'none';
+        });
+      }
+    });
+  });
+
+  // ---------- toast ----------
+  var toastEl = document.getElementById('toast');
+  var toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+  }
+
+  // ---------- bottom sheet ----------
+  var sheetBackdrop = document.getElementById('sheet-backdrop');
+  var sheetBody = document.getElementById('sheet-body');
+  function closeSheet(){ sheetBackdrop.classList.remove('open'); }
+  sheetBackdrop.addEventListener('click', function(e){ if(e.target === sheetBackdrop) closeSheet(); });
+
+  var PRODUCTOS = ['Leche entera (l)','Yogures naturales (ud)','Arroz redondo (kg)','Tomate frito (ud)',
+    'Calabaza (ud)','Garbanzos cocidos (ud)','Avena (g)','Cebolla (ud)','Patata (kg)','Huevo (ud)',
+    'Harina (kg)','Azúcar (kg)','Aceite de oliva (l)','Nata para cocinar (ml)'];
+  function productoOptions(){ return PRODUCTOS.map(function(p){ return '<option>'+p+'</option>'; }).join(''); }
+  function ingRowHtml(){
+    return '<div class="ing-row"><select>'+productoOptions()+'</select>' +
+      '<input type="number" min="0" step="0.01" placeholder="Cantidad">' +
+      '<button type="button" class="ing-row-remove" aria-label="Quitar ingrediente"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button></div>';
+  }
+
+  var sheets = {
+    'add-lote': '<h3>Añadir a la despensa</h3>' +
+      '<div class="field"><label>Producto</label><select>'+productoOptions()+'</select></div>' +
+      '<div class="field-row"><div class="field"><label>Cantidad</label><input type="number" value="1" min="0" step="0.01"></div><div class="field"><label>Ubicación</label><select><option>Nevera</option><option>Congelador</option><option>Despensa</option><option>Trastero</option></select></div></div>' +
+      '<div class="field"><label>Detalle de ubicación (opcional)</label><input type="text" placeholder="ej. Cajón 2, balda de arriba…"></div>' +
+      '<div class="field-row"><div class="field"><label>Fecha de entrada</label><input type="date"></div><div class="field"><label>Fecha de caducidad (opcional)</label><input type="date"></div></div>' +
+      '<div class="sheet-actions"><button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-save="Producto añadido">Guardar</button></div>',
+    'add-receta': '<h3>Nueva receta</h3>' +
+      '<div class="field"><label>Nombre</label><input type="text" placeholder="ej. Lentejas estofadas"></div>' +
+      '<div class="field-row"><div class="field"><label>Categoría</label><select><option>Comida</option><option>Desayuno</option><option>Cena</option><option>Postre</option><option>Snack</option></select></div><div class="field"><label>Tiempo (min)</label><input type="number" value="30" min="0"></div></div>' +
+      '<div class="field"><label>Comensales base</label><input type="number" value="2" min="1"></div>' +
+      '<div class="field"><label>Instrucciones (opcional)</label><textarea rows="2" placeholder="Pasos a seguir…"></textarea></div>' +
+      '<div class="ing-editor-head"><span>Ingredientes · para los comensales base</span><button type="button" class="btn-add-ing" id="btn-add-ing"><svg class="icon icon-sm"><use href="#ic-plus"/></svg>Ingrediente</button></div>' +
+      '<div id="ing-rows"></div>' +
+      '<div class="sheet-actions"><button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-save="Receta guardada">Guardar</button></div>',
+    'assign': '<h3>Asignar receta</h3>' +
+      '<div class="field"><label>Receta</label><select><option>Ensalada de garbanzos</option><option>Tortilla de patatas</option><option>Crema de calabaza</option><option>Porridge de avena</option></select></div>' +
+      '<div class="field"><label>Comensales</label><input type="number" value="2" min="1"></div>' +
+      '<div class="sheet-actions"><button class="btn" data-close>Quitar</button><button class="btn btn-primary" data-save="Menú actualizado">Guardar</button></div>'
+  };
+  function openSheet(key){
+    sheetBody.innerHTML = sheets[key];
+    if(key === 'add-receta'){
+      document.getElementById('ing-rows').insertAdjacentHTML('beforeend', ingRowHtml() + ingRowHtml());
+    }
+    sheetBackdrop.classList.add('open');
+  }
+  sheetBody.addEventListener('click', function(e){
+    if(e.target.closest('[data-close]')){ closeSheet(); return; }
+    var saveBtn = e.target.closest('[data-save]');
+    if(saveBtn){ closeSheet(); toast(saveBtn.dataset.save); return; }
+    if(e.target.closest('#btn-add-ing')){
+      document.getElementById('ing-rows').insertAdjacentHTML('beforeend', ingRowHtml());
+      return;
+    }
+    var rm = e.target.closest('.ing-row-remove');
+    if(rm){
+      var rows = document.querySelectorAll('#ing-rows .ing-row');
+      if(rows.length > 1){ rm.closest('.ing-row').remove(); }
+    }
+  });
+  document.getElementById('fab-despensa').addEventListener('click', function(){ openSheet('add-lote'); });
+  document.getElementById('fab-recetas').addEventListener('click', function(){ openSheet('add-receta'); });
+  document.getElementById('fab-despensa-desktop').addEventListener('click', function(){ openSheet('add-lote'); });
+  document.getElementById('fab-recetas-desktop').addEventListener('click', function(){ openSheet('add-receta'); });
+  document.getElementById('btn-generar-lista').addEventListener('click', function(){ toast('Lista de la compra actualizada'); });
+
+  // ---------- menu semanal: day strip + agenda ----------
+  var dias = [
+    {dow:'Lun', num:14}, {dow:'Mar', num:15}, {dow:'Mié', num:16}, {dow:'Jue', num:17},
+    {dow:'Vie', num:18}, {dow:'Sáb', num:19}, {dow:'Dom', num:20}
+  ];
+  var hoyIndex = 4;
+  var comidas = {
+    14: {desayuno:'Porridge de avena', comida:'Tortilla de patatas', cena:'', postre:''},
+    15: {desayuno:'', comida:'Ensalada de garbanzos', cena:'Crema de calabaza', postre:''},
+    16: {desayuno:'Porridge de avena', comida:'', cena:'', postre:'Bizcocho de yogur'},
+    17: {desayuno:'', comida:'Tortilla de patatas', cena:'Crema de calabaza', postre:''},
+    18: {desayuno:'Porridge de avena', comida:'Ensalada de garbanzos', cena:'Crema de calabaza', postre:''},
+    19: {desayuno:'', comida:'', cena:'', postre:''},
+    20: {desayuno:'Porridge de avena', comida:'Tortilla de patatas', cena:'', postre:'Bizcocho de yogur'}
+  };
+  var etiquetas = {desayuno:'Desayuno', comida:'Comida', cena:'Cena', postre:'Postre'};
+  var daystrip = document.getElementById('daystrip');
+  var agenda = document.getElementById('agenda');
+  var activeDay = hoyIndex;
+
+  function renderDaystrip(){
+    daystrip.innerHTML = '';
+    dias.forEach(function(d, i){
+      var chip = document.createElement('button');
+      chip.className = 'daychip' + (i === hoyIndex ? ' today' : '') + (i === activeDay ? ' active' : '');
+      chip.innerHTML = '<span class="dow">'+d.dow+'</span><span class="num">'+d.num+'</span>';
+      chip.addEventListener('click', function(){ activeDay = i; renderDaystrip(); renderAgenda(); });
+      daystrip.appendChild(chip);
+    });
+  }
+  function renderAgenda(){
+    var num = dias[activeDay].num;
+    var menu = comidas[num] || {};
+    agenda.innerHTML = '';
+    ['desayuno','comida','cena','postre'].forEach(function(tipo){
+      var val = menu[tipo];
+      var row = document.createElement('button');
+      row.className = 'meal-row';
+      row.innerHTML = '<span><span class="meal-label">'+etiquetas[tipo]+'</span><span class="meal-value'+(val ? '' : ' empty')+'">'+(val || 'Añadir receta')+'</span></span><svg class="icon icon-sm"><use href="#ic-chev-right"/></svg>';
+      row.addEventListener('click', function(){ openSheet('assign'); });
+      agenda.appendChild(row);
+    });
+  }
+  document.getElementById('btn-hoy').addEventListener('click', function(){ activeDay = hoyIndex; renderDaystrip(); renderAgenda(); });
+  renderDaystrip();
+  renderAgenda();
+
+  // ---------- menu semanal: rejilla completa (vista de escritorio) ----------
+  function renderWeekGrid(){
+    var grid = document.getElementById('week-grid');
+    var html = '<div class="wg-cell wg-corner"></div>';
+    dias.forEach(function(d, i){
+      html += '<div class="wg-cell wg-daylabel' + (i === hoyIndex ? ' today' : '') + '">' +
+        '<span class="dow">' + d.dow + '</span><span class="num">' + d.num + '</span></div>';
+    });
+    ['desayuno','comida','cena','postre'].forEach(function(tipo){
+      html += '<div class="wg-cell wg-mealcell">' + etiquetas[tipo] + '</div>';
+      dias.forEach(function(d){
+        var val = (comidas[d.num] || {})[tipo];
+        html += '<div class="wg-cell" data-tipo="' + tipo + '" data-num="' + d.num + '">' +
+          '<span class="wg-value' + (val ? '' : ' empty') + '">' + (val || '+ Añadir') + '</span></div>';
+      });
+    });
+    grid.innerHTML = html;
+    grid.querySelectorAll('.wg-cell[data-tipo]').forEach(function(cell){
+      cell.addEventListener('click', function(){ openSheet('assign'); });
+    });
+  }
+  renderWeekGrid();
+
+  // ---------- compra: add / check / delete ----------
+  var rowsCompra = document.getElementById('rows-compra');
+  document.getElementById('form-compra-add').addEventListener('submit', function(e){
+    e.preventDefault();
+    var nombre = document.getElementById('in-compra-nombre').value.trim();
+    var cantidad = document.getElementById('in-compra-cantidad').value || '1';
+    if(!nombre) return;
+    var row = document.createElement('div');
+    row.className = 'item-row';
+    row.dataset.origen = 'mano';
+    row.innerHTML = '<span class="check-row" style="flex:1; display:flex; align-items:center; gap:11px; min-width:0;"><span class="checkdot"><svg class="icon icon-sm" style="width:13px;height:13px;"><use href="#ic-check"/></svg></span><span class="item-main"><span class="item-name"></span><span class="item-meta"></span></span></span><span class="origin-pill">A mano</span><button class="row-delete"><svg class="icon icon-sm"><use href="#ic-trash"/></svg></button>';
+    row.querySelector('.item-name').textContent = nombre;
+    row.querySelector('.item-meta').textContent = cantidad + ' ud';
+    rowsCompra.appendChild(row);
+    e.target.reset();
+    document.getElementById('in-compra-cantidad').value = 1;
+  });
+  rowsCompra.addEventListener('click', function(e){
+    if(e.target.closest('.row-delete')){ e.target.closest('.item-row').remove(); return; }
+    var checkdot = e.target.closest('.checkdot');
+    if(checkdot){ checkdot.closest('.item-row').classList.toggle('done'); }
+  });
+  document.getElementById('btn-quitar-comprados').addEventListener('click', function(){
+    rowsCompra.querySelectorAll('.item-row.done').forEach(function(row){ row.remove(); });
+  });
+
+  // ---------- ajustes: tema, ubicaciones, catálogo ----------
+  var themeSwitch = document.getElementById('theme-switch');
+  themeSwitch.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(!btn) return;
+    themeSwitch.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    if(btn.dataset.theme){ document.documentElement.setAttribute('data-theme', btn.dataset.theme); }
+    else { document.documentElement.removeAttribute('data-theme'); }
+  });
+
+  document.getElementById('tag-ubicaciones').addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(btn){ btn.closest('.tag').remove(); }
+  });
+  document.getElementById('form-ubicacion').addEventListener('submit', function(e){
+    e.preventDefault();
+    var input = e.target.nombre;
+    var nombre = input.value.trim();
+    if(!nombre) return;
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.innerHTML = nombre + '<button aria-label="Eliminar"><svg class="icon icon-sm"><use href="#ic-x"/></svg></button>';
+    document.getElementById('tag-ubicaciones').appendChild(tag);
+    input.value = '';
+  });
+
+  document.getElementById('catalogo-list').addEventListener('click', function(e){
+    if(e.target.closest('.row-delete')){ e.target.closest('.catalog-row').remove(); }
+  });
+})();
+</script>

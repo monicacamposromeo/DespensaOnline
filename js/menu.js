@@ -19,34 +19,47 @@ function renderMenuSemanal() {
     TIPOS_COMIDA.forEach(tipo => {
         html += `<div class="menu-grid-row-header">${TIPO_COMIDA_LABELS[tipo]}</div>`;
         dias.forEach(fecha => {
-            const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
-            html += menuCellHtml(fecha, tipo, entrada);
+            const entradas = state.menuSemanal.filter(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
+            html += menuCellHtml(fecha, tipo, entradas);
         });
     });
     html += '</div>';
     DOM.menuGrid.innerHTML = html;
 
-    DOM.menuGrid.querySelectorAll('[data-menu-cell]').forEach(cell => {
-        cell.addEventListener('click', () => {
-            const { fecha, tipo } = cell.dataset;
-            const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
-            openMenuEntryModal(fecha, tipo, entrada);
+    DOM.menuGrid.querySelectorAll('[data-menu-add]').forEach(btn => {
+        btn.addEventListener('click', () => openMenuEntryModal(btn.dataset.fecha, btn.dataset.tipo, null));
+    });
+    DOM.menuGrid.querySelectorAll('[data-entrada-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const entrada = state.menuSemanal.find(m => String(m.id) === btn.dataset.entradaId);
+            if (entrada) openMenuEntryModal(entrada.fecha, entrada.tipo_comida, entrada);
         });
     });
 
     renderDayStrip();
     renderAgendaDia();
+    renderAlertasBadge();
 }
 
-function menuCellHtml(fecha, tipo, entrada) {
-    if (!entrada) {
-        return `<div class="menu-grid-cell menu-grid-cell-empty" data-menu-cell data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir</div>`;
+// Un hueco (fecha+comida) puede tener varios platos asignados (varios comensales comiendo
+// cosas distintas, o primer y segundo plato): entradas es un array, no una única entrada.
+function menuCellHtml(fecha, tipo, entradas) {
+    if (entradas.length === 0) {
+        return `<button type="button" class="menu-grid-cell menu-grid-cell-empty" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir</button>`;
     }
-    const receta = getReceta(entrada.recetaId);
+    const platos = entradas.map(entrada => {
+        const receta = getReceta(entrada.recetaId);
+        return `
+            <button type="button" class="menu-grid-entry" data-entrada-id="${entrada.id}">
+                <strong>${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</strong>
+                <span class="menu-grid-comensales">${entrada.comensales} comensales</span>
+            </button>
+        `;
+    }).join('');
     return `
-        <div class="menu-grid-cell" data-menu-cell data-fecha="${fecha}" data-tipo="${tipo}">
-            <strong>${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</strong>
-            <span class="menu-grid-comensales">${entrada.comensales} comensales</span>
+        <div class="menu-grid-cell">
+            ${platos}
+            <button type="button" class="menu-grid-add-more" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir plato</button>
         </div>
     `;
 }
@@ -75,23 +88,43 @@ function renderDayStrip() {
     });
 }
 
+// Un encabezado por comida (Desayuno/Comida/Cena) con una fila por plato asignado ese
+// día (puede haber varios) y un enlace para añadir otro más al mismo hueco.
 function renderAgendaDia() {
     const fecha = state.selectedDayISO;
     DOM.menuAgenda.innerHTML = TIPOS_COMIDA.map(tipo => {
-        const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
-        const receta = entrada ? getReceta(entrada.recetaId) : null;
-        const valor = receta ? escapeHtml(receta.nombre) : 'Añadir receta';
-        return `<button type="button" class="meal-row" data-fecha="${fecha}" data-tipo="${tipo}">
-            <span><span class="meal-label">${TIPO_COMIDA_LABELS[tipo]}</span><span class="meal-value${receta ? '' : ' empty'}">${valor}</span></span>
-            <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
-        </button>`;
+        const entradas = state.menuSemanal.filter(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
+
+        const platos = entradas.length > 0
+            ? entradas.map(entrada => {
+                const receta = getReceta(entrada.recetaId);
+                return `<button type="button" class="meal-row" data-entrada-id="${entrada.id}">
+                    <span class="meal-value">${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</span>
+                    <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
+                </button>`;
+            }).join('')
+            : `<button type="button" class="meal-row" data-fecha="${fecha}" data-tipo="${tipo}">
+                <span class="meal-value empty">Añadir receta</span>
+                <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
+            </button>`;
+
+        const addMas = entradas.length > 0
+            ? `<button type="button" class="text-btn meal-add-mas" data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir otro plato</button>`
+            : '';
+
+        return `<h3 class="section-subtitle">${TIPO_COMIDA_LABELS[tipo]}</h3>${platos}${addMas}`;
     }).join('');
 
+    DOM.menuAgenda.querySelectorAll('[data-entrada-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            const entrada = state.menuSemanal.find(m => String(m.id) === row.dataset.entradaId);
+            if (entrada) openMenuEntryModal(entrada.fecha, entrada.tipo_comida, entrada);
+        });
+    });
     DOM.menuAgenda.querySelectorAll('[data-fecha]').forEach(row => {
         row.addEventListener('click', () => {
             const { fecha, tipo } = row.dataset;
-            const entrada = state.menuSemanal.find(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
-            openMenuEntryModal(fecha, tipo, entrada);
+            openMenuEntryModal(fecha, tipo, null);
         });
     });
 }

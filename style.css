@@ -116,6 +116,13 @@ button { cursor: pointer; }
 .btn-icon-only, .btn-icon-only.btn { padding: 9px 11px; font-size: 1rem; }
 .btn-block { width: 100%; margin-top: 6px; }
 
+.btn-with-badge { position: relative; }
+.badge-count {
+    position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 3px;
+    border-radius: 999px; background: var(--danger); color: #ffffff; font-size: 0.65rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+
 /* ==========================================================================
    Landing
    ========================================================================== */
@@ -263,6 +270,18 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     color: var(--text-muted); margin: 20px 0 8px;
 }
 .section-title:first-child { margin-top: 0; }
+/* En la rejilla de 2 columnas de escritorio, el encabezado de grupo ocupa toda la fila
+   (no una sola columna) para no romper el emparejado de tarjetas. Sin efecto en móvil. */
+.lotes-list .section-title, .recetas-grid .section-title { grid-column: 1 / -1; }
+
+/* Sub-encabezado (detalle de ubicación dentro de una ubicación): un nivel menos
+   prominente que .section-title, mismo criterio de "ocupar toda la fila" en escritorio. */
+.section-subtitle {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--text-muted); opacity: 0.85; margin: 12px 0 6px; padding-left: 2px;
+}
+.section-subtitle:first-child { margin-top: 0; }
+.lotes-list .section-subtitle { grid-column: 1 / -1; }
 
 /* ==========================================================================
    Avatar "monograma" — inicial de color en vez de icono emoji
@@ -272,22 +291,28 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     font-weight: 700; font-size: 0.95rem; background: var(--primary-light); color: var(--primary);
 }
 .mono-sm { width: 30px; height: 30px; border-radius: 9px; font-size: 0.82rem; }
+.mono-qty { font-size: 0.62rem; letter-spacing: -0.01em; padding: 0 2px; text-align: center; line-height: 1.05; }
 
 /* ==========================================================================
    Alertas de caducidad
    ========================================================================== */
 .alertas-caducidad { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .alert-strip {
+    display: flex; flex-direction: column; gap: 2px;
     padding: 11px 14px; border-radius: 12px; font-size: 0.88rem; font-weight: 500;
     border-left: 3px solid var(--warning);
 }
+.alert-strip strong { font-weight: 700; }
+.alerta-detalle { font-size: 0.8rem; font-weight: 400; opacity: 0.85; }
 .alert-strip.alert-danger { background: var(--danger-light); border-left-color: var(--danger); color: var(--text-primary); }
 .alert-strip.alert-warn { background: var(--warning-light); border-left-color: var(--warning); color: var(--text-primary); }
+.alert-strip.alert-info { background: var(--primary-light); border-left-color: var(--primary); color: var(--text-primary); }
 
 /* ==========================================================================
    Filas tipo tarjeta (despensa / listas con estado)
    ========================================================================== */
 .lotes-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.lotes-list-modal { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .item-row {
     width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
     background: var(--bg-card); border: 1px solid var(--border-color); text-align: left; cursor: pointer;
@@ -321,10 +346,25 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .ingredientes-editor { margin: 18px 0; }
 .ingredientes-editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
 .ingredientes-editor-header label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
-.ingrediente-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-.ingrediente-row .ingrediente-producto { flex: 2; min-width: 0; }
-.ingrediente-row .ingrediente-cantidad { flex: 1; min-width: 0; }
+.ingrediente-item { margin-bottom: 10px; }
+.ingrediente-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ingrediente-row .ingrediente-producto { flex: 2; min-width: 120px; }
+.ingrediente-row .ingrediente-cantidad { flex: 1; min-width: 70px; }
+.ingrediente-precocinado {
+    display: flex; align-items: center; gap: 5px; flex: 0 0 auto; cursor: pointer;
+    font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;
+}
+.ingrediente-precocinado input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--primary); }
 .btn-remove-ingrediente { background: var(--danger-light); color: var(--danger); border-radius: 9px; padding: 9px 12px; cursor: pointer; border: none; flex: 0 0 auto; }
+
+/* Alta rápida de producto desde el selector de la despensa/receta ("+ Crear producto nuevo…") */
+.nuevo-producto-fields { margin: 8px 0 14px; padding: 10px 12px; border: 1px dashed var(--border-color); border-radius: 10px; }
+
+/* Desplegable de categoría + campo de texto que aparece al elegir "+ Nueva categoría…" */
+.field-with-add { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+.nuevo-producto-fields .form-input { margin-bottom: 8px; }
+.nuevo-producto-fields .form-row { gap: 8px; margin-bottom: 0; }
+.nuevo-producto-fields .form-row > * { flex: 1; }
 
 /* ==========================================================================
    Menú semanal
@@ -352,10 +392,10 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     cursor: pointer; margin-bottom: 8px; text-align: left; color: var(--text-primary); transition: var(--transition-fast);
 }
 .meal-row:hover { border-color: var(--primary); }
-.meal-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 3px; }
 .meal-value { font-weight: 600; font-size: 0.94rem; }
 .meal-value.empty { color: var(--text-muted); font-weight: 500; }
 .meal-row .icon-sm { color: var(--text-muted); flex: 0 0 auto; }
+.meal-add-mas { display: block; margin: -2px 0 12px 4px; font-size: 0.82rem; }
 
 /* Vista de escritorio: semana completa (oculta en móvil, ver media query) */
 #menu-week-view { display: none; }
@@ -375,12 +415,28 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 
 .menu-grid-cell {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px;
-    padding: 10px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
-    cursor: pointer; transition: var(--transition-fast); font-size: 0.85rem;
+    padding: 8px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 6px;
+    font-size: 0.85rem;
 }
-.menu-grid-cell:hover { border-color: var(--primary); }
-.menu-grid-cell-empty { color: var(--text-muted); align-items: center; justify-content: center; }
+.menu-grid-cell-empty {
+    color: var(--text-muted); align-items: center; justify-content: center; cursor: pointer;
+    background: var(--bg-card); border: 1px solid var(--border-color); font: inherit; transition: var(--transition-fast);
+}
+.menu-grid-cell-empty:hover { border-color: var(--primary); }
 .menu-grid-comensales { color: var(--text-secondary); font-size: 0.75rem; }
+
+/* Un plato dentro de una celda con varios asignados (varios comensales, primer/segundo...) */
+.menu-grid-entry {
+    display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
+    background: var(--bg-sunken); border: 1px solid transparent; border-radius: 8px; padding: 6px 8px;
+    cursor: pointer; color: inherit; font: inherit; transition: var(--transition-fast);
+}
+.menu-grid-entry:hover { border-color: var(--primary); }
+.menu-grid-add-more {
+    background: none; border: none; padding: 2px 4px; color: var(--text-muted); font-size: 0.72rem;
+    text-align: left; cursor: pointer; font-weight: 600;
+}
+.menu-grid-add-more:hover { color: var(--primary); }
 
 /* ==========================================================================
    Lista de la compra
@@ -393,12 +449,21 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 }
 .compra-item.comprado { opacity: 0.5; }
 .compra-item.comprado .compra-item-nombre { text-decoration: line-through; }
-.compra-item-label { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; min-width: 0; }
-.compra-item-label input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); flex: 0 0 auto; }
+.compra-item-checkbox { display: flex; flex: 0 0 auto; cursor: pointer; }
+.compra-item-checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+.compra-item-info {
+    display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+    background: none; border: none; padding: 0; text-align: left; color: inherit; font: inherit;
+}
+button.compra-item-info, label.compra-item-info { cursor: pointer; }
 .compra-item-nombre { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compra-item-cantidad { color: var(--text-secondary); font-size: 0.85rem; flex: 0 0 auto; }
 .row-delete { flex: 0 0 auto; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; }
 .row-delete:hover { color: var(--danger); }
+
+/* Fila informativa dentro de un modal (sin acción al pulsar) */
+.item-row-static { cursor: default; }
+.item-row-static:hover { border-color: var(--border-color); }
 
 /* ==========================================================================
    Configuración
@@ -410,15 +475,23 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .config-hint { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
 .config-hint code { background: var(--bg-sunken); padding: 2px 6px; border-radius: 6px; }
 
+.checkbox-field { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+.checkbox-field input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+
 .theme-toggle {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px;
     border-radius: 12px; background: var(--bg-sunken); border: 1px solid var(--border-color); cursor: pointer;
     color: var(--text-primary); font-weight: 600;
 }
 
+.catalog-toolbar { display: flex; gap: 10px; }
+.catalog-toolbar .search-input { flex: 1; margin-bottom: 0; }
+.catalog-toolbar select { flex: 0 0 150px; }
 .productos-list { display: flex; flex-direction: column; margin-top: 6px; max-height: 340px; overflow-y: auto; }
 .catalog-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--border-color); font-size: 0.88rem; }
 .catalog-row:last-child { border-bottom: none; }
+.catalog-row-clickable { cursor: pointer; }
+.catalog-row-clickable:hover .catalog-name { color: var(--primary); }
 .catalog-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .catalog-meta { color: var(--text-muted); font-size: 0.78rem; flex: 0 0 auto; }
 

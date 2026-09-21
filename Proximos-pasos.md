@@ -1,3 +1,12 @@
 - [x] Poder añadir diferentes ubucaciones para la despensa con sububicaciones solo de información. Para así poder añadir: (el pollo esta en el congelador cajón 2)
 - [x] Que la despensa sea un listado "normal" no un listado de tarjetas.
 - [x] Que el listado de la despensa, esté cada categría en la misma columna, es decir, que siempre quede la cantidad a la misma altura, que quede la ubicación de la despensa en la misma columna y el tema de la caducidad también (puede estar delante)
+- [x] Al clicar (de alguna forma) un elemento del listado de la compra generado por el menú, poder ver en que receta lo necesito.
+- [x] Pantalla de alertas. alertas tipo:
+    - Esto va a caducar
+    - Tienes que descongelar esto (1 día antes)
+    - Esto ha caducado tiralo
+    - Tienes que cocinar esto (según el menú de hoy)
+    - Tienes que comprar esto para hoy!!
+- [x] Tengo que poder añadir varias recetas a una comida del menú, porque cada comensal puede comer una cosa o podemos comer primer y segundo plato.
+- [x] Configurar el minimo de elementos de cada ingrediente para que se añada automáticamente a la lista de la compra, independientemente de si esta en el menú. Esto genera un "nuevo listado" de la compra.

@@ -20,6 +20,14 @@ function formatCantidad(cantidad, unidad) {
     return `${formatted} ${unidad || ''}`.trim();
 }
 
+// Igual que formatCantidad() pero sin espacio, para caber en el avatar "monograma"
+// de la despensa (p. ej. "500g", "2.5l") en vez del número + unidad separados.
+function formatCantidadCompacta(cantidad, unidad) {
+    const n = parseFloat(cantidad) || 0;
+    const formatted = Number.isInteger(n) ? n : round2(n);
+    return `${formatted}${unidad || ''}`;
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');

@@ -28,6 +28,7 @@ function nextId(collection) {
 
 function renderAllScreens() {
     populateProductoSelectors();
+    populateCategoriaSelectors();
     populateUbicacionSelectors();
     populateRecetaSelectors();
     renderDespensa();
@@ -234,7 +235,7 @@ function checkLocalCache() {
 function loadDemoData() {
     state.productos = [
         { id: 1, nombre: 'Huevos', categoria: 'Lácteos y huevos', unidad: 'ud', icono: '🥚', activa: true },
-        { id: 2, nombre: 'Leche', categoria: 'Lácteos y huevos', unidad: 'l', icono: '🥛', activa: true },
+        { id: 2, nombre: 'Leche', categoria: 'Lácteos y huevos', unidad: 'l', stock_minimo: 2, icono: '🥛', activa: true }, // ejemplo de reposición automática: solo hay 1l en la despensa
         { id: 3, nombre: 'Harina', categoria: 'Despensa seca', unidad: 'g', icono: '🌾', activa: true },
         { id: 4, nombre: 'Tomate', categoria: 'Verdura', unidad: 'ud', icono: '🍅', activa: true },
         { id: 5, nombre: 'Cebolla', categoria: 'Verdura', unidad: 'ud', icono: '🧅', activa: true },
@@ -259,9 +260,11 @@ function loadDemoData() {
     ];
 
     state.recetas = [
-        { id: 1, nombre: 'Tortilla de patatas', categoria: 'comida', tiempo_preparacion_min: 30, comensales_base: 2, instrucciones: 'Freír, batir los huevos con la cebolla pochada y cuajar en la sartén.', activa: true },
-        { id: 2, nombre: 'Arroz con pollo', categoria: 'comida', tiempo_preparacion_min: 40, comensales_base: 4, instrucciones: 'Sofreír el pollo y la verdura, añadir el arroz y el caldo, cocer.', activa: true },
-        { id: 3, nombre: 'Pasta con tomate y queso', categoria: 'cena', tiempo_preparacion_min: 20, comensales_base: 2, instrucciones: 'Cocer la pasta, saltear con tomate y gratinar con el queso.', activa: true }
+        { id: 1, nombre: 'Tortilla de patatas', categoria: 'comida', tiempo_preparacion_min: 30, comensales_base: 2, requiere_cocinado: true, instrucciones: 'Freír, batir los huevos con la cebolla pochada y cuajar en la sartén.', activa: true },
+        { id: 2, nombre: 'Arroz con pollo', categoria: 'comida', tiempo_preparacion_min: 40, comensales_base: 4, requiere_cocinado: true, instrucciones: 'Sofreír el pollo y la verdura, añadir el arroz y el caldo, cocer.', activa: true },
+        // Receta "de montar": no lleva la marca general (no es un guiso conjunto), solo
+        // la pasta necesita cocinarse — el tomate frito y el queso rallado ya están listos.
+        { id: 3, nombre: 'Pasta con tomate y queso', categoria: 'cena', tiempo_preparacion_min: 20, comensales_base: 2, requiere_cocinado: false, instrucciones: 'Cocer la pasta, mezclar con el tomate frito y espolvorear el queso.', activa: true }
     ];
 
     state.recetaIngredientes = [
@@ -272,7 +275,7 @@ function loadDemoData() {
         { id: 5, recetaId: 2, productoId: 6, cantidad: 320 },
         { id: 6, recetaId: 2, productoId: 5, cantidad: 1 },
         { id: 7, recetaId: 2, productoId: 4, cantidad: 2 },
-        { id: 8, recetaId: 3, productoId: 8, cantidad: 200 },
+        { id: 8, recetaId: 3, productoId: 8, cantidad: 200, requiere_cocinado: true }, // la pasta sí hay que cocerla
         { id: 9, recetaId: 3, productoId: 4, cantidad: 3 },
         { id: 10, recetaId: 3, productoId: 9, cantidad: 60 }
     ];
@@ -300,7 +303,10 @@ function applyWriteAction(action, data, persist) {
     switch (action) {
         case 'producto': {
             const id = nextId(state.productos);
-            state.productos.push({ id, nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud', icono: data.icono || '🍽️', activa: true });
+            state.productos.push({
+                id, nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud',
+                stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null, icono: data.icono || '🍽️', activa: true
+            });
             commit();
             return { success: true, id, message: 'Producto creado' };
         }
@@ -310,6 +316,7 @@ function applyWriteAction(action, data, persist) {
             if (data.nombre !== undefined) p.nombre = data.nombre;
             if (data.categoria !== undefined) p.categoria = data.categoria;
             if (data.unidad !== undefined) p.unidad = data.unidad;
+            if (data.stock_minimo !== undefined) p.stock_minimo = data.stock_minimo ? parseFloat(data.stock_minimo) : null;
             if (data.icono !== undefined) p.icono = data.icono;
             if (data.activa !== undefined) p.activa = !!data.activa;
             commit();
@@ -378,12 +385,16 @@ function applyWriteAction(action, data, persist) {
                 categoria: data.categoria || 'comida',
                 tiempo_preparacion_min: data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null,
                 comensales_base: Number(data.comensales_base) || 1,
+                requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
                 instrucciones: data.instrucciones || '',
                 activa: true
             });
             let nextIngId = nextId(state.recetaIngredientes);
             (data.ingredientes || []).forEach(ing => {
-                state.recetaIngredientes.push({ id: nextIngId++, recetaId: id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0 });
+                state.recetaIngredientes.push({
+                    id: nextIngId++, recetaId: id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0,
+                    requiere_cocinado: !!ing.requiere_cocinado
+                });
             });
             commit();
             return { success: true, id, message: 'Receta creada' };
@@ -395,13 +406,17 @@ function applyWriteAction(action, data, persist) {
             if (data.categoria !== undefined) r.categoria = data.categoria;
             if (data.tiempo_preparacion_min !== undefined) r.tiempo_preparacion_min = data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null;
             if (data.comensales_base !== undefined) r.comensales_base = Number(data.comensales_base) || 1;
+            if (data.requiere_cocinado !== undefined) r.requiere_cocinado = !!data.requiere_cocinado;
             if (data.instrucciones !== undefined) r.instrucciones = data.instrucciones;
             if (data.ingredientes !== undefined) {
                 // Sustitución completa de ingredientes (más simple que un diff fino para una app básica)
                 state.recetaIngredientes = state.recetaIngredientes.filter(ri => ri.recetaId != data.id);
                 let nextIngId = nextId(state.recetaIngredientes);
                 data.ingredientes.forEach(ing => {
-                    state.recetaIngredientes.push({ id: nextIngId++, recetaId: r.id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0 });
+                    state.recetaIngredientes.push({
+                        id: nextIngId++, recetaId: r.id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0,
+                        requiere_cocinado: !!ing.requiere_cocinado
+                    });
                 });
             }
             commit();

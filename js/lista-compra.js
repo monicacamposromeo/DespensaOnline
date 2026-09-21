@@ -50,46 +50,131 @@ async function generarListaCompra(fechaInicio, fechaFin) {
     }
 }
 
+// Reposición automática: productos con productos.stock_minimo configurado cuyo stock
+// actual (getStockDisponible()) ha caído por debajo. Independiente del menú semanal —
+// se recalcula cada vez que cambia la despensa o el catálogo de productos (ver los
+// puntos donde se llama: renderDespensa(), altas/ediciones de producto en js/config.js).
+// Mismo patrón de upsert por Set que generarListaCompra(), con origen='minimo'.
+async function actualizarListaReposicion() {
+    const productoIdsRelevantes = new Set([
+        ...state.productos.filter(p => p.activa && parseFloat(p.stock_minimo) > 0).map(p => String(p.id)),
+        ...state.listaCompra.filter(li => li.origen === 'minimo' && !li.comprado).map(li => String(li.productoId))
+    ]);
+
+    for (const productoId of productoIdsRelevantes) {
+        const producto = getProducto(productoId);
+        const minimo = producto ? (parseFloat(producto.stock_minimo) || 0) : 0;
+        const disponible = getStockDisponible(productoId);
+        const faltante = round2(Math.max(0, minimo - disponible));
+        const existente = state.listaCompra.find(li => li.origen === 'minimo' && !li.comprado && String(li.productoId) === String(productoId));
+
+        if (faltante > 0) {
+            if (existente) {
+                if (existente.cantidad !== faltante) await apiRequest('editar_lista_compra_item', 'PATCH', { id: existente.id, cantidad: faltante });
+            } else {
+                await apiRequest('lista_compra_item', 'POST', { productoId, cantidad: faltante, origen: 'minimo' });
+            }
+        } else if (existente) {
+            await apiRequest('eliminar_lista_compra_item', 'DELETE', { id: existente.id });
+        }
+    }
+}
+
 function renderListaCompra() {
     const menuItems = state.listaCompra.filter(li => li.origen === 'menu').sort((a, b) => a.comprado - b.comprado);
+    const minimoItems = state.listaCompra.filter(li => li.origen === 'minimo').sort((a, b) => a.comprado - b.comprado);
     const manualItems = state.listaCompra.filter(li => li.origen === 'manual').sort((a, b) => a.comprado - b.comprado);
 
     DOM.compraEmpty.classList.toggle('hidden', state.listaCompra.length > 0);
     DOM.compraListMenu.innerHTML = menuItems.length > 0
         ? menuItems.map(compraItemHtml).join('')
         : '<p class="empty-state-inline">Genera la lista desde el menú semanal.</p>';
+    DOM.compraListMinimo.innerHTML = minimoItems.length > 0
+        ? minimoItems.map(compraItemHtml).join('')
+        : '<p class="empty-state-inline">Ningún producto con stock mínimo está por debajo de lo configurado.</p>';
     DOM.compraListManual.innerHTML = manualItems.length > 0
         ? manualItems.map(compraItemHtml).join('')
         : '<p class="empty-state-inline">Sin productos añadidos a mano.</p>';
 
-    DOM.compraListMenu.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
-        cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
-    });
-    DOM.compraListManual.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
-        cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
-    });
-    DOM.compraListMenu.querySelectorAll('[data-compra-delete]').forEach(btn => {
-        btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
-    });
-    DOM.compraListManual.querySelectorAll('[data-compra-delete]').forEach(btn => {
-        btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
+    [DOM.compraListMenu, DOM.compraListMinimo, DOM.compraListManual].forEach(container => {
+        container.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
+            cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
+        });
+        container.querySelectorAll('[data-compra-delete]').forEach(btn => {
+            btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
+        });
+        container.querySelectorAll('[data-compra-info]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = state.listaCompra.find(li => String(li.id) === btn.dataset.compraInfo);
+                if (item) openCompraInfoModal(item);
+            });
+        });
     });
 }
 
 function compraItemHtml(item) {
     const producto = getProducto(item.productoId);
     if (!producto) return '';
+    const checkboxId = `compra-cb-${item.id}`;
+    // Del menú: el nombre/cantidad abre el desglose por receta (botón). A mano: no hay
+    // receta que mostrar, así que el nombre/cantidad sigue marcando comprado como antes
+    // (una <label> más, apuntando al mismo checkbox).
+    const infoTag = item.origen === 'menu' ? 'button' : 'label';
+    const infoAttrs = item.origen === 'menu' ? `type="button" data-compra-info="${item.id}"` : `for="${checkboxId}"`;
     return `
         <div class="compra-item ${item.comprado ? 'comprado' : ''}">
-            <label class="compra-item-label">
-                <input type="checkbox" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''}>
+            <label class="compra-item-checkbox">
+                <input type="checkbox" id="${checkboxId}" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''}>
+            </label>
+            <${infoTag} class="compra-item-info" ${infoAttrs}>
                 <span class="mono mono-sm">${escapeHtml(monogramLetter(producto.nombre))}</span>
                 <span class="compra-item-nombre">${escapeHtml(producto.nombre)}</span>
                 <span class="compra-item-cantidad">${formatCantidad(item.cantidad, producto.unidad)}</span>
-            </label>
+            </${infoTag}>
             <button type="button" class="row-delete" data-compra-delete="${item.id}" title="Quitar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `;
+}
+
+/* ==========================================================================
+   Modal: en qué recetas del menú se necesita un producto (solo para filas
+   origen='menu' — las de "a mano" no vienen de ninguna receta).
+   ========================================================================== */
+function compraInfoRowHtml(uso, unidad) {
+    return `
+        <div class="item-row item-row-static">
+            <span class="mono mono-qty" title="${escapeHtml(formatCantidad(uso.cantidadNecesaria, unidad))}">${escapeHtml(formatCantidadCompacta(uso.cantidadNecesaria, unidad))}</span>
+            <span class="item-main">
+                <span class="item-name">${escapeHtml(uso.receta.nombre)}</span>
+                <span class="item-meta">${TIPO_COMIDA_LABELS[uso.entrada.tipo_comida] || uso.entrada.tipo_comida} · ${formatDate(uso.entrada.fecha)}</span>
+            </span>
+        </div>
+    `;
+}
+
+function openCompraInfoModal(item) {
+    const producto = getProducto(item.productoId);
+    if (!producto) return;
+
+    DOM.modalCompraInfoTitle.textContent = producto.nombre;
+
+    const usos = getUsosDeProductoEnMenu(item.productoId);
+    if (usos.length === 0) {
+        DOM.compraInfoResumen.textContent = 'Ya no aparece en el menú actual (puede que el menú haya cambiado desde que se generó la lista).';
+        DOM.compraInfoList.innerHTML = '';
+    } else {
+        const necesario = round2(usos.reduce((sum, u) => sum + u.cantidadNecesaria, 0));
+        const disponible = getStockDisponible(item.productoId);
+        DOM.compraInfoResumen.textContent =
+            `Necesario en total: ${formatCantidad(necesario, producto.unidad)} · Ya tienes: ${formatCantidad(disponible, producto.unidad)} · A comprar: ${formatCantidad(item.cantidad, producto.unidad)}`;
+        DOM.compraInfoList.innerHTML = usos.map(u => compraInfoRowHtml(u, producto.unidad)).join('');
+    }
+
+    DOM.modalCompraInfo.classList.remove('hidden');
+}
+
+function closeCompraInfoModal() {
+    DOM.modalCompraInfo.classList.add('hidden');
 }
 
 async function toggleCompradoCompra(id, comprado) {

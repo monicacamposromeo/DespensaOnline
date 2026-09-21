@@ -190,7 +190,8 @@ async function handleSupabaseWriteAction(action, method, data) {
         switch (action) {
             case 'producto': {
                 const [row] = await supabaseWrite('productos', 'POST', {
-                    nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud', icono: data.icono || '', activa: true
+                    nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud',
+                    stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null, icono: data.icono || '', activa: true
                 });
                 state.productos.push(row);
                 return { success: true, id: row.id, message: 'Producto creado' };
@@ -198,6 +199,7 @@ async function handleSupabaseWriteAction(action, method, data) {
             case 'editar_producto': {
                 const payload = {};
                 ['nombre', 'categoria', 'unidad', 'icono'].forEach(k => { if (data[k] !== undefined) payload[k] = data[k]; });
+                if (data.stock_minimo !== undefined) payload.stock_minimo = data.stock_minimo ? parseFloat(data.stock_minimo) : null;
                 if (data.activa !== undefined) payload.activa = !!data.activa;
                 const [row] = await supabaseWrite(`productos?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Producto no encontrado' };
@@ -263,13 +265,15 @@ async function handleSupabaseWriteAction(action, method, data) {
                     categoria: data.categoria || 'comida',
                     tiempo_preparacion_min: data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null,
                     comensales_base: Number(data.comensales_base) || 1,
+                    requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
                     instrucciones: data.instrucciones || '',
                     activa: true
                 });
                 state.recetas.push(recetaRow);
 
                 const ingredientes = (data.ingredientes || []).map(ing => ({
-                    recetaId: recetaRow.id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0
+                    recetaId: recetaRow.id, productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0,
+                    requiere_cocinado: !!ing.requiere_cocinado
                 }));
                 if (ingredientes.length > 0) {
                     const ingRows = await supabaseWrite('receta_ingredientes', 'POST', ingredientes);
@@ -282,6 +286,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 ['nombre', 'categoria', 'instrucciones'].forEach(k => { if (data[k] !== undefined) payload[k] = data[k]; });
                 if (data.tiempo_preparacion_min !== undefined) payload.tiempo_preparacion_min = data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null;
                 if (data.comensales_base !== undefined) payload.comensales_base = Number(data.comensales_base) || 1;
+                if (data.requiere_cocinado !== undefined) payload.requiere_cocinado = !!data.requiere_cocinado;
 
                 const [row] = await supabaseWrite(`recetas?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Receta no encontrada' };
@@ -291,7 +296,8 @@ async function handleSupabaseWriteAction(action, method, data) {
                     await supabaseFetch(`receta_ingredientes?recetaId=eq.${data.id}`, { method: 'DELETE' });
                     state.recetaIngredientes = state.recetaIngredientes.filter(ri => ri.recetaId != data.id);
                     const nuevos = data.ingredientes.map(ing => ({
-                        recetaId: Number(data.id), productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0
+                        recetaId: Number(data.id), productoId: Number(ing.productoId), cantidad: parseFloat(ing.cantidad) || 0,
+                        requiere_cocinado: !!ing.requiere_cocinado
                     }));
                     if (nuevos.length > 0) {
                         const ingRows = await supabaseWrite('receta_ingredientes', 'POST', nuevos);

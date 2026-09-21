@@ -34,6 +34,11 @@ function initNavExitApp() {
     });
 }
 
+function initAlertasActions() {
+    DOM.btnAlertas.addEventListener('click', openAlertasModal);
+    DOM.btnCloseModalAlertas.addEventListener('click', closeAlertasModal);
+}
+
 function initModalBackdropClose() {
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
         backdrop.addEventListener('click', (e) => {
@@ -92,7 +97,11 @@ function initConfigActions() {
     DOM.btnConfigLoadLocal.addEventListener('click', () => DOM.inputLocalFile.click());
     DOM.btnConfigDeleteLocal.addEventListener('click', deleteLocalDB);
     DOM.formNuevoProducto.addEventListener('submit', handleNuevoProductoSubmit);
+    DOM.btnCancelEditProducto.addEventListener('click', cancelarEdicionProducto);
     DOM.formNuevaUbicacion.addEventListener('submit', handleNuevaUbicacionSubmit);
+    wireCategoriaSelect(DOM.inProductoCategoria, DOM.inProductoCategoriaNueva);
+    DOM.productosSearch.addEventListener('input', (e) => { state.productosFiltro.search = e.target.value; renderProductosConfig(); });
+    DOM.productosSort.addEventListener('change', (e) => { state.productosFiltro.sort = e.target.value; renderProductosConfig(); });
 }
 
 function initDespensaActions() {
@@ -101,6 +110,12 @@ function initDespensaActions() {
     DOM.btnCancelLote.addEventListener('click', closeLoteModal);
     DOM.formLote.addEventListener('submit', handleLoteFormSubmit);
     DOM.btnDeleteLote.addEventListener('click', handleDeleteLote);
+    DOM.inLoteProducto.addEventListener('change', updateLoteNuevoProductoVisibility);
+    wireCategoriaSelect(DOM.inLoteNuevoProductoCategoria, DOM.inLoteNuevoProductoCategoriaNueva);
+    DOM.inLoteUbicacion.addEventListener('change', () => populateDetalleUbicacionSelector(DOM.inLoteUbicacion.value));
+    wireSelectConNuevo(DOM.inLoteDetalleUbicacion, DOM.inLoteDetalleUbicacionNueva, DETALLE_NUEVO_VALUE);
+    DOM.btnCloseModalLoteGrupo.addEventListener('click', closeLoteGrupoModal);
+    DOM.btnAddLoteAlGrupo.addEventListener('click', handleAddLoteAlGrupo);
     DOM.despensaSearch.addEventListener('input', (e) => { state.despensaFiltro.search = e.target.value; renderDespensa(); });
     DOM.despensaChipsUbicacion.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');
@@ -147,4 +162,5 @@ function initMenuActions() {
 function initCompraActions() {
     DOM.formAddManualCompra.addEventListener('submit', handleAddManualCompra);
     DOM.btnLimpiarComprados.addEventListener('click', handleLimpiarComprados);
+    DOM.btnCloseModalCompraInfo.addEventListener('click', closeCompraInfoModal);
 }

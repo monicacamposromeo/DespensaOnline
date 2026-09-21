@@ -40,6 +40,7 @@
         <symbol id="ic-chev-right" viewBox="0 0 24 24"><path d="M9.5 5 16 12l-6.5 7"/></symbol>
         <symbol id="ic-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
         <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v11.5"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+        <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14.5 6 10.5Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
     </svg>
 
     <!-- ==========================================================================
@@ -95,6 +96,10 @@
             <header class="top-bar">
                 <h1 class="page-title" id="bar-title">Despensa</h1>
                 <div class="right-section">
+                    <button class="btn btn-secondary btn-icon-only btn-with-badge" id="btn-alertas" title="Alertas" aria-label="Alertas">
+                        <svg class="icon-sm"><use href="#ic-bell"/></svg>
+                        <span class="badge-count hidden" id="alertas-badge">0</span>
+                    </button>
                     <div class="demo-badge hidden" id="demo-mode-badge"><span>DEMO</span></div>
                     <button class="btn btn-secondary btn-icon-only hidden" id="btn-download-local" title="Descargar base de datos (.json)"><svg class="icon-sm"><use href="#ic-download"/></svg></button>
                     <div class="api-status-badge disconnected" id="api-status">
@@ -174,6 +179,11 @@
                         <div id="compra-list-menu" class="compra-list"></div>
                     </div>
                     <div class="compra-section">
+                        <h2 class="section-title">Reposición automática</h2>
+                        <p class="config-hint">Productos con un stock mínimo configurado (Configuración → Catálogo de productos) que han bajado de ese mínimo. Se actualiza solo, sin depender del menú.</p>
+                        <div id="compra-list-minimo" class="compra-list"></div>
+                    </div>
+                    <div class="compra-section">
                         <h2 class="section-title">Añadido a mano</h2>
                         <div id="compra-list-manual" class="compra-list"></div>
                     </div>
@@ -226,7 +236,10 @@
                             <h3>Catálogo de productos</h3>
                             <form id="form-nuevo-producto" class="inline-form inline-form-wrap">
                                 <input type="text" id="in-producto-nombre" class="form-input" placeholder="Nombre" required>
-                                <input type="text" id="in-producto-categoria" class="form-input" placeholder="Categoría (ej. Verdura)">
+                                <div class="field-with-add">
+                                    <select id="in-producto-categoria" class="form-select"></select>
+                                    <input type="text" id="in-producto-categoria-nueva" class="form-input hidden" placeholder="Nombre de la categoría nueva">
+                                </div>
                                 <select id="in-producto-unidad" class="form-select">
                                     <option value="ud">ud</option>
                                     <option value="g">g</option>
@@ -234,9 +247,21 @@
                                     <option value="ml">ml</option>
                                     <option value="l">l</option>
                                 </select>
+                                <input type="number" id="in-producto-stock-minimo" class="form-input" placeholder="Stock mínimo (opcional)" min="0" step="0.01">
                                 <input type="hidden" id="in-producto-icono" value="">
-                                <button type="submit" class="btn btn-primary">Añadir</button>
+                                <button type="submit" class="btn btn-primary" id="btn-submit-producto">Añadir</button>
+                                <button type="button" class="btn btn-secondary hidden" id="btn-cancel-edit-producto">Cancelar</button>
                             </form>
+                            <p class="config-hint">Si pones un stock mínimo, cuando la despensa baje de esa cantidad el producto se añadirá solo a "Reposición automática" en la Lista de la Compra.</p>
+                            <div class="catalog-toolbar">
+                                <input type="text" id="productos-search" class="search-input" placeholder="Buscar producto…">
+                                <select id="productos-sort" class="form-select">
+                                    <option value="nombre-asc">Nombre (A-Z)</option>
+                                    <option value="nombre-desc">Nombre (Z-A)</option>
+                                    <option value="categoria-asc">Categoría (A-Z)</option>
+                                    <option value="unidad-asc">Unidad (A-Z)</option>
+                                </select>
+                            </div>
                             <div id="productos-list" class="productos-list"></div>
                         </div>
                     </div>
@@ -266,6 +291,22 @@
                     <label for="in-lote-producto">Producto</label>
                     <select id="in-lote-producto" class="form-select" required></select>
                 </div>
+                <div class="nuevo-producto-fields hidden" id="lote-nuevo-producto-fields">
+                    <input type="text" id="in-lote-nuevo-producto-nombre" class="form-input" placeholder="Nombre del producto nuevo">
+                    <div class="form-row">
+                        <div class="field-with-add">
+                            <select id="in-lote-nuevo-producto-categoria" class="form-select"></select>
+                            <input type="text" id="in-lote-nuevo-producto-categoria-nueva" class="form-input hidden" placeholder="Nombre de la categoría nueva">
+                        </div>
+                        <select id="in-lote-nuevo-producto-unidad" class="form-select">
+                            <option value="ud">ud</option>
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="l">l</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="in-lote-cantidad">Cantidad</label>
@@ -276,9 +317,15 @@
                         <select id="in-lote-ubicacion" class="form-select" required></select>
                     </div>
                 </div>
+                <div class="form-group" id="lote-paquetes-field">
+                    <label for="in-lote-paquetes">Número de paquetes iguales</label>
+                    <input type="number" id="in-lote-paquetes" class="form-input" min="1" step="1" value="1">
+                    <p class="config-hint">Si pones más de 1, cada paquete se guarda como un lote independiente (podrás editar o gastar cada uno por separado más adelante), todos con la cantidad de arriba.</p>
+                </div>
                 <div class="form-group">
                     <label for="in-lote-detalle-ubicacion">Detalle de ubicación (opcional)</label>
-                    <input type="text" id="in-lote-detalle-ubicacion" class="form-input" placeholder="ej. Cajón 2, balda de arriba...">
+                    <select id="in-lote-detalle-ubicacion" class="form-select"></select>
+                    <input type="text" id="in-lote-detalle-ubicacion-nueva" class="form-input hidden" placeholder="ej. Cajón 2, balda de arriba...">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -296,6 +343,21 @@
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal: grupo de lotes fusionados en el listado (mismo producto+ubicación+detalle) -->
+    <div class="modal-backdrop hidden" id="modal-lote-grupo">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2 id="modal-lote-grupo-title">Lotes</h2>
+                <button class="modal-close" id="btn-close-modal-lote-grupo" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <div id="lote-grupo-list" class="lotes-list-modal"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary btn-block" id="btn-add-lote-al-grupo">Añadir otro lote</button>
+            </div>
         </div>
     </div>
 
@@ -334,6 +396,13 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label class="checkbox-field">
+                        <input type="checkbox" id="in-receta-requiere-cocinado" checked>
+                        Requiere precocinado (el plato completo)
+                    </label>
+                    <p class="config-hint">Márcalo si toda la receta se prepara como un guiso o plato conjunto que hay que cocinar (lentejas, arroz con pollo...). Desmárcalo si es una receta de montar donde, como mucho, algún ingrediente concreto necesita precocinado por separado — en ese caso, márcalo en ese ingrediente más abajo, aunque esta casilla esté desmarcada.</p>
+                </div>
+                <div class="form-group">
                     <label for="in-receta-instrucciones">Instrucciones (opcional)</label>
                     <textarea id="in-receta-instrucciones" class="form-input" rows="3"></textarea>
                 </div>
@@ -343,6 +412,7 @@
                         <label>Ingredientes (cantidad para los comensales base)</label>
                         <button type="button" class="btn btn-secondary btn-small" id="btn-add-ingrediente-row">+ Ingrediente</button>
                     </div>
+                    <p class="config-hint">Marca "Precocinar" solo en el ingrediente que necesites preparar aparte (p. ej. el arroz de unas fajitas), aunque el resto de la receta no requiera cocinado.</p>
                     <div id="ingredientes-rows"></div>
                 </div>
 
@@ -381,6 +451,31 @@
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal: alertas -->
+    <div class="modal-backdrop hidden" id="modal-alertas">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2>Alertas</h2>
+                <button class="modal-close" id="btn-close-modal-alertas" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <div id="alertas-list" class="alertas-caducidad"></div>
+        </div>
+    </div>
+
+    <!-- Modal: en qué recetas se necesita un producto de la lista de la compra -->
+    <div class="modal-backdrop hidden" id="modal-compra-info">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2 id="modal-compra-info-title">Producto</h2>
+                <button class="modal-close" id="btn-close-modal-compra-info" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <p id="compra-info-resumen" class="config-hint"></p>
+            <div id="compra-info-list" class="lotes-list-modal"></div>
         </div>
     </div>
 
@@ -424,6 +519,7 @@
     <script src="./js/recetas.js"></script>
     <script src="./js/menu.js"></script>
     <script src="./js/lista-compra.js"></script>
+    <script src="./js/alertas.js"></script>
     <script src="./js/config.js"></script>
     <script src="./js/event-handler.js"></script>
     <script src="./app.js"></script>

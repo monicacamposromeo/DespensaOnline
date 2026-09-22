@@ -110,9 +110,13 @@ function initDespensaActions() {
     DOM.btnCancelLote.addEventListener('click', closeLoteModal);
     DOM.formLote.addEventListener('submit', handleLoteFormSubmit);
     DOM.btnDeleteLote.addEventListener('click', handleDeleteLote);
+    DOM.btnDuplicateLote.addEventListener('click', handleDuplicateLote);
     DOM.inLoteProducto.addEventListener('change', updateLoteNuevoProductoVisibility);
     wireCategoriaSelect(DOM.inLoteNuevoProductoCategoria, DOM.inLoteNuevoProductoCategoriaNueva);
-    DOM.inLoteUbicacion.addEventListener('change', () => populateDetalleUbicacionSelector(DOM.inLoteUbicacion.value));
+    DOM.inLoteUbicacion.addEventListener('change', () => {
+        populateDetalleUbicacionSelector(DOM.inLoteUbicacion.value);
+        updateNoDescongelarVisibility();
+    });
     wireSelectConNuevo(DOM.inLoteDetalleUbicacion, DOM.inLoteDetalleUbicacionNueva, DETALLE_NUEVO_VALUE);
     DOM.btnCloseModalLoteGrupo.addEventListener('click', closeLoteGrupoModal);
     DOM.btnAddLoteAlGrupo.addEventListener('click', handleAddLoteAlGrupo);
@@ -132,6 +136,7 @@ function initRecetasActions() {
     DOM.btnCancelReceta.addEventListener('click', closeRecetaModal);
     DOM.formReceta.addEventListener('submit', handleRecetaFormSubmit);
     DOM.btnDeleteReceta.addEventListener('click', handleDeleteReceta);
+    DOM.btnDuplicateReceta.addEventListener('click', handleDuplicateReceta);
     DOM.btnAddIngredienteRow.addEventListener('click', () => addIngredienteRow());
     DOM.recetasChipsCategoria.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');

@@ -90,6 +90,7 @@ function openRecetaModal(receta = null) {
     DOM.inRecetaRequiereCocinado.checked = receta ? receta.requiere_cocinado !== false : true;
     DOM.inRecetaInstrucciones.value = receta ? (receta.instrucciones || '') : '';
     DOM.btnDeleteReceta.classList.toggle('hidden', !receta);
+    DOM.btnDuplicateReceta.classList.toggle('hidden', !receta);
 
     DOM.ingredientesRows.innerHTML = '';
     const ingredientes = receta ? getIngredientesReceta(receta.id) : [];
@@ -229,5 +230,39 @@ async function handleDeleteReceta() {
         renderRecetas();
         populateRecetaSelectors();
         renderMenuSemanal();
+    }
+}
+
+// Crea una receta nueva con el mismo nombre (+ "(copia)"), datos e ingredientes que la
+// que se está editando: la original se deja intacta, para partir de ella con variaciones.
+async function handleDuplicateReceta() {
+    if (!state.editingRecetaId) return;
+    const receta = getReceta(state.editingRecetaId);
+    if (!receta) return;
+
+    const ingredientes = getIngredientesReceta(receta.id).map(ing => ({
+        productoId: ing.productoId,
+        cantidad: ing.cantidad,
+        requiere_cocinado: !!ing.requiere_cocinado
+    }));
+
+    const result = await apiRequest('receta', 'POST', {
+        nombre: `${receta.nombre} (copia)`,
+        categoria: receta.categoria,
+        tiempo_preparacion_min: receta.tiempo_preparacion_min || null,
+        comensales_base: receta.comensales_base,
+        requiere_cocinado: receta.requiere_cocinado !== false,
+        instrucciones: receta.instrucciones || '',
+        ingredientes
+    });
+
+    if (result && result.success) {
+        showToast('Receta duplicada', 'success');
+        closeRecetaModal();
+        renderRecetas();
+        populateRecetaSelectors();
+        renderMenuSemanal();
+    } else {
+        showToast(result?.error || 'Error al duplicar', 'error');
     }
 }

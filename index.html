@@ -337,8 +337,16 @@
                         <input type="date" id="in-lote-fecha-caducidad" class="form-input">
                     </div>
                 </div>
+                <div class="form-group hidden" id="lote-no-descongelar-field">
+                    <label class="checkbox-field">
+                        <input type="checkbox" id="in-lote-no-descongelar">
+                        No hay que descongelar esto
+                    </label>
+                    <p class="config-hint">Márcalo si este lote ya está listo para cocinar sin descongelar antes (p. ej. verdura congelada). No se avisará de "Descongelar" para él en las alertas.</p>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-lote">Eliminar</button>
+                    <button type="button" class="btn btn-secondary hidden" id="btn-duplicate-lote">Duplicar</button>
                     <button type="button" class="btn btn-secondary" id="btn-cancel-lote">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
@@ -418,6 +426,7 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-receta">Eliminar</button>
+                    <button type="button" class="btn btn-secondary hidden" id="btn-duplicate-receta">Duplicar</button>
                     <button type="button" class="btn btn-secondary" id="btn-cancel-receta">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>

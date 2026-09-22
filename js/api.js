@@ -235,6 +235,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                     detalle_ubicacion: data.detalle_ubicacion || null,
                     fecha_caducidad: data.fecha_caducidad || null,
                     fecha_entrada: data.fecha_entrada || todayISO(),
+                    no_requiere_descongelar: !!data.no_requiere_descongelar,
                     activa: true
                 });
                 state.despensa.push(row);
@@ -248,6 +249,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 if (data.detalle_ubicacion !== undefined) payload.detalle_ubicacion = data.detalle_ubicacion || null;
                 if (data.fecha_caducidad !== undefined) payload.fecha_caducidad = data.fecha_caducidad || null;
                 if (data.fecha_entrada !== undefined) payload.fecha_entrada = data.fecha_entrada;
+                if (data.no_requiere_descongelar !== undefined) payload.no_requiere_descongelar = !!data.no_requiere_descongelar;
                 const [row] = await supabaseWrite(`despensa?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Lote no encontrado' };
                 Object.assign(state.despensa.find(l => l.id == data.id) || {}, row);

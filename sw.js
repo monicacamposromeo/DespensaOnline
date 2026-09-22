@@ -1,4 +1,4 @@
-const CACHE_NAME = 'despensa-online-v2'; // subir el número al cambiar el set de assets cacheados
+const CACHE_NAME = 'despensa-online-v3'; // subir el número al cambiar el set de assets cacheados
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -14,6 +14,7 @@ const ASSETS_TO_CACHE = [
     './js/recetas.js',
     './js/menu.js',
     './js/lista-compra.js',
+    './js/alertas.js',
     './js/config.js',
     './js/event-handler.js',
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
@@ -43,7 +44,21 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // Red primero, con { cache: 'no-store' } para saltarse también la caché HTTP del
+    // navegador (no solo la de este Service Worker): así un simple F5 con conexión
+    // siempre trae la versión más reciente de cada archivo, en vez de quedarse pillado
+    // con lo que se cacheó en una visita anterior. La copia en caché se sigue
+    // actualizando en cada acierto de red y solo se usa como red de seguridad sin
+    // conexión (ver ARQUITECTURA-PLANTILLA.md §6).
     event.respondWith(
-        caches.match(event.request).then(cached => cached || fetch(event.request))
+        fetch(event.request, { cache: 'no-store' })
+            .then(response => {
+                if (response.ok) {
+                    const copia = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, copia));
+                }
+                return response;
+            })
+            .catch(() => caches.match(event.request))
     );
 });

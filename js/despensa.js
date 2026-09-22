@@ -189,6 +189,15 @@ function updateLoteNuevoProductoVisibility() {
     DOM.loteNuevoProductoFields.classList.toggle('hidden', DOM.inLoteProducto.value !== PRODUCTO_NUEVO_VALUE);
 }
 
+// El checkbox "No hay que descongelar esto" solo tiene sentido si el lote está en una
+// ubicación que "parece congelador" (esUbicacionCongelador(), js/alertas.js); en cualquier
+// otra ubicación no hay alerta de "Descongelar" de la que excluirlo.
+function updateNoDescongelarVisibility() {
+    const esCongelador = esUbicacionCongelador(DOM.inLoteUbicacion.value);
+    DOM.loteNoDescongelarField.classList.toggle('hidden', !esCongelador);
+    if (!esCongelador) DOM.inLoteNoDescongelar.checked = false;
+}
+
 /* ==========================================================================
    Detalle de ubicación: desplegable que depende de la ubicación elegida (solo
    ofrece los detalles ya usados dentro de esa ubicación) + opción de escribir
@@ -235,7 +244,10 @@ function openLoteModal(lote = null, prefill = null) {
     populateDetalleUbicacionSelector(DOM.inLoteUbicacion.value, lote ? (lote.detalle_ubicacion || '') : (prefill?.detalle_ubicacion || ''));
     DOM.inLoteFechaEntrada.value = lote ? lote.fecha_entrada : todayISO();
     DOM.inLoteFechaCaducidad.value = lote ? (lote.fecha_caducidad || '') : '';
+    DOM.inLoteNoDescongelar.checked = lote ? !!lote.no_requiere_descongelar : false;
+    updateNoDescongelarVisibility();
     DOM.btnDeleteLote.classList.toggle('hidden', !lote);
+    DOM.btnDuplicateLote.classList.toggle('hidden', !lote);
     DOM.modalLote.classList.remove('hidden');
 }
 
@@ -318,7 +330,8 @@ async function handleLoteFormSubmit(e) {
         ubicacionId: DOM.inLoteUbicacion.value,
         detalle_ubicacion: resolveSelectConNuevo(DOM.inLoteDetalleUbicacion, DOM.inLoteDetalleUbicacionNueva, DETALLE_NUEVO_VALUE) || null,
         fecha_entrada: DOM.inLoteFechaEntrada.value || todayISO(),
-        fecha_caducidad: DOM.inLoteFechaCaducidad.value || null
+        fecha_caducidad: DOM.inLoteFechaCaducidad.value || null,
+        no_requiere_descongelar: DOM.inLoteNoDescongelar.checked
     };
 
     if (state.editingLoteId) {
@@ -362,5 +375,32 @@ async function handleDeleteLote() {
         closeLoteModal();
         renderDespensa();
         renderListaCompra();
+    }
+}
+
+// Crea un lote nuevo con los mismos datos que el que se está editando (mismo producto,
+// cantidad, ubicación, detalle y fechas): el original se deja intacto.
+async function handleDuplicateLote() {
+    if (!state.editingLoteId) return;
+    const lote = state.despensa.find(l => String(l.id) === String(state.editingLoteId));
+    if (!lote) return;
+
+    const result = await apiRequest('despensa_lote', 'POST', {
+        productoId: lote.productoId,
+        cantidad: lote.cantidad,
+        ubicacionId: lote.ubicacionId,
+        detalle_ubicacion: lote.detalle_ubicacion || null,
+        fecha_entrada: lote.fecha_entrada,
+        fecha_caducidad: lote.fecha_caducidad || null,
+        no_requiere_descongelar: !!lote.no_requiere_descongelar
+    });
+
+    if (result && result.success) {
+        showToast('Lote duplicado', 'success');
+        closeLoteModal();
+        renderDespensa();
+        renderListaCompra();
+    } else {
+        showToast(result?.error || 'Error al duplicar', 'error');
     }
 }

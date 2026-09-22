@@ -165,7 +165,10 @@ const DOM = {
     inLoteDetalleUbicacionNueva: document.getElementById('in-lote-detalle-ubicacion-nueva'),
     inLoteFechaEntrada: document.getElementById('in-lote-fecha-entrada'),
     inLoteFechaCaducidad: document.getElementById('in-lote-fecha-caducidad'),
+    loteNoDescongelarField: document.getElementById('lote-no-descongelar-field'),
+    inLoteNoDescongelar: document.getElementById('in-lote-no-descongelar'),
     btnDeleteLote: document.getElementById('btn-delete-lote'),
+    btnDuplicateLote: document.getElementById('btn-duplicate-lote'),
     btnCancelLote: document.getElementById('btn-cancel-lote'),
 
     // Modal: grupo de lotes fusionados (mismo producto+ubicación+detalle)
@@ -190,6 +193,7 @@ const DOM = {
     btnAddIngredienteRow: document.getElementById('btn-add-ingrediente-row'),
     ingredientesRows: document.getElementById('ingredientes-rows'),
     btnDeleteReceta: document.getElementById('btn-delete-receta'),
+    btnDuplicateReceta: document.getElementById('btn-duplicate-receta'),
     btnCancelReceta: document.getElementById('btn-cancel-receta'),
 
     // Modal: hueco de menú semanal

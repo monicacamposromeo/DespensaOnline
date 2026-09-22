@@ -10,3 +10,10 @@
     - Tienes que comprar esto para hoy!!
 - [x] Tengo que poder añadir varias recetas a una comida del menú, porque cada comensal puede comer una cosa o podemos comer primer y segundo plato.
 - [x] Configurar el minimo de elementos de cada ingrediente para que se añada automáticamente a la lista de la compra, independientemente de si esta en el menú. Esto genera un "nuevo listado" de la compra.
+- [x] Poder duplicar tanto elementos de despensa como recetas
+- [x] Poder marcar elementos del congelador como (no hay que descongelar) para las alertas.
+- [x] Lista de la compra "Reposición automática" poder ver cual es el mínimo de elementos o cuantos hay ahora
+- [x] Cuando haya cambios que un simple F5 recargue los cambios aunque haya caché
+- [x] Las recetas que requieran de procecinado, si es precocinado de recets completa: recordar desde el viernes anterior a la receta que hay que precocinarla, si es precocinado d eun solo elemento: recordar el mismo día de la receta en el menú.
+- [x] Separar en la compra por categoría de ingrediente, como está en la despensa el tema de las subcategorías.
+- [x] En los avisos, dentro de misma prioridad mostrar primero las cosas de hoy y dentro de las cosas de hoy mostrar primero desayuno, después comida y por último cena.

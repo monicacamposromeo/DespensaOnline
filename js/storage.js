@@ -354,6 +354,7 @@ function applyWriteAction(action, data, persist) {
                 detalle_ubicacion: data.detalle_ubicacion || null,
                 fecha_caducidad: data.fecha_caducidad || null,
                 fecha_entrada: data.fecha_entrada || todayISO(),
+                no_requiere_descongelar: !!data.no_requiere_descongelar,
                 activa: true
             });
             commit();
@@ -368,6 +369,7 @@ function applyWriteAction(action, data, persist) {
             if (data.detalle_ubicacion !== undefined) l.detalle_ubicacion = data.detalle_ubicacion || null;
             if (data.fecha_caducidad !== undefined) l.fecha_caducidad = data.fecha_caducidad || null;
             if (data.fecha_entrada !== undefined) l.fecha_entrada = data.fecha_entrada;
+            if (data.no_requiere_descongelar !== undefined) l.no_requiere_descongelar = !!data.no_requiere_descongelar;
             commit();
             return { success: true, message: 'Lote actualizado' };
         }

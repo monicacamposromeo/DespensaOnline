@@ -10,7 +10,13 @@ async function generarListaCompraSemana() {
     showToast('Lista de la compra generada a partir del menú de esta semana', 'success');
 }
 
+// fechaInicio nunca cuenta días ya pasados: si se pide generar una semana que ya empezó
+// (p. ej. hoy es miércoles y la semana visible arrancaba el lunes), lo comido/planificado
+// en días anteriores a hoy no debe generar necesidad de compra retroactiva.
 async function generarListaCompra(fechaInicio, fechaFin) {
+    const hoy = todayISO();
+    if (fechaInicio < hoy) fechaInicio = hoy;
+
     const necesidades = {}; // productoId -> cantidad total necesaria
 
     state.menuSemanal

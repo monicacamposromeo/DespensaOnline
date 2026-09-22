@@ -288,23 +288,32 @@ function recetaRequierePrecocinado(receta) {
     return getIngredientesReceta(receta.id).some(ing => ing.requiere_cocinado === true);
 }
 
-// Qué entradas del menú semanal (activas) necesitan este producto como ingrediente ahora
-// mismo, y cuánto (ya escalado por comensales/comensales_base, igual que generarListaCompra()
-// en js/lista-compra.js). Se recalcula al vuelo, no se guarda nada al generar la lista de la
-// compra: así el desglose siempre refleja el menú actual, aunque haya cambiado después.
+// Qué entradas del menú semanal (activas, de HOY en adelante — igual que generarListaCompra(),
+// js/lista-compra.js, los días ya pasados no cuentan como necesidad) necesitan este producto
+// como ingrediente ahora mismo, y cuánto (ya escalado por comensales/comensales_base). Se
+// recalcula al vuelo, no se guarda nada al generar la lista de la compra: así el desglose
+// siempre refleja el menú actual, aunque haya cambiado después.
 function getUsosDeProductoEnMenu(productoId) {
+    const hoy = todayISO();
     return state.menuSemanal
-        .filter(e => e.activa)
+        .filter(e => e.activa && e.fecha >= hoy)
         .map(entrada => {
             const receta = getReceta(entrada.recetaId);
             if (!receta) return null;
-            const ingrediente = getIngredientesReceta(receta.id).find(ing => String(ing.productoId) === String(productoId));
-            if (!ingrediente) return null;
+            // Suma TODAS las filas de receta_ingredientes de esa receta que sean este producto
+            // (no solo la primera con .find()): si el producto está repetido como ingrediente
+            // dentro de la misma receta, generarListaCompra() (js/lista-compra.js) ya suma
+            // todas esas filas al calcular la necesidad real, así que este desglose tiene que
+            // hacer lo mismo para que los números cuadren.
+            const cantidadIngrediente = getIngredientesReceta(receta.id)
+                .filter(ing => String(ing.productoId) === String(productoId))
+                .reduce((sum, ing) => sum + (parseFloat(ing.cantidad) || 0), 0);
+            if (cantidadIngrediente <= 0) return null;
             const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
             return {
                 entrada,
                 receta,
-                cantidadNecesaria: round2((parseFloat(ingrediente.cantidad) || 0) * factor)
+                cantidadNecesaria: round2(cantidadIngrediente * factor)
             };
         })
         .filter(Boolean)

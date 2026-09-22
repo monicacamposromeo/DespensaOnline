@@ -17,3 +17,4 @@
 - [x] Las recetas que requieran de procecinado, si es precocinado de recets completa: recordar desde el viernes anterior a la receta que hay que precocinarla, si es precocinado d eun solo elemento: recordar el mismo día de la receta en el menú.
 - [x] Separar en la compra por categoría de ingrediente, como está en la despensa el tema de las subcategorías.
 - [x] En los avisos, dentro de misma prioridad mostrar primero las cosas de hoy y dentro de las cosas de hoy mostrar primero desayuno, después comida y por último cena.
+- [x] A la hora de generar la lista de la compra, no hay que tener en cuenta las recetas de días anteriores, de hoy en adelante

@@ -149,15 +149,26 @@ function getAlertas() {
             if (!receta || !recetaRequierePrecocinado(receta)) return;
 
             const comida = TIPO_COMIDA_LABELS[entrada.tipo_comida] || entrada.tipo_comida;
+            const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
+            let titulo = `Hoy toca cocinar ${receta.nombre}`;
             let detalle = comida;
             if (receta.requiere_cocinado === false) {
                 // El plato completo no lleva marca general: lo que dispara la alerta son
-                // ingredientes concretos, así que merece la pena decir cuáles.
+                // ingredientes concretos, así que el título dice cuáles y cuánto, y el
+                // detalle pasa a mostrar la receta (ya no hace falta repetirla en el título).
                 const ingredientesACocinar = getIngredientesReceta(receta.id)
                     .filter(ing => ing.requiere_cocinado === true)
-                    .map(ing => getProducto(ing.productoId)?.nombre)
+                    .map(ing => {
+                        const producto = getProducto(ing.productoId);
+                        if (!producto) return null;
+                        const cantidad = (parseFloat(ing.cantidad) || 0) * factor;
+                        return `${formatCantidad(cantidad, producto.unidad)} ${producto.nombre}`;
+                    })
                     .filter(Boolean);
-                if (ingredientesACocinar.length > 0) detalle = `${comida} · Precocina: ${ingredientesACocinar.join(', ')}`;
+                if (ingredientesACocinar.length > 0) {
+                    titulo = `Hoy toca cocinar ${ingredientesACocinar.join(', ')}`;
+                    detalle = `${comida} · ${receta.nombre}`;
+                }
             }
 
             alertas.push({
@@ -165,7 +176,7 @@ function getAlertas() {
                 prioridad: 3,
                 fecha: hoy,
                 tipoComida: entrada.tipo_comida,
-                titulo: `Hoy toca cocinar ${receta.nombre}`,
+                titulo,
                 detalle
             });
         });

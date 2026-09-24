@@ -8,12 +8,14 @@ function getWeekDates(weekStart) {
 
 function renderMenuSemanal() {
     const dias = getWeekDates(state.selectedWeekStart);
+    const hoy = todayISO();
     DOM.weekRangeLabel.textContent = `${formatDate(dias[0])} - ${formatDate(dias[6])}`;
 
     let html = '<div class="menu-grid-inner">';
     html += '<div class="menu-grid-corner"></div>';
     dias.forEach((fecha, i) => {
-        html += `<div class="menu-grid-day-header">${DIAS_SEMANA_LABELS[i]}<br><span class="menu-grid-day-date">${formatDate(fecha)}</span></div>`;
+        const claseHoy = fecha === hoy ? ' today' : '';
+        html += `<div class="menu-grid-day-header${claseHoy}">${DIAS_SEMANA_LABELS[i]}<br><span class="menu-grid-day-date">${formatDate(fecha)}</span></div>`;
     });
 
     TIPOS_COMIDA.forEach(tipo => {
@@ -49,9 +51,10 @@ function menuCellHtml(fecha, tipo, entradas) {
     }
     const platos = entradas.map(entrada => {
         const receta = getReceta(entrada.recetaId);
+        const nombre = receta ? receta.nombre : 'Receta eliminada';
         return `
             <button type="button" class="menu-grid-entry" data-entrada-id="${entrada.id}">
-                <strong>${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</strong>
+                <strong title="${escapeHtml(nombre)}">${escapeHtml(nombre)}</strong>
                 <span class="menu-grid-comensales">${entrada.comensales} comensales</span>
             </button>
         `;

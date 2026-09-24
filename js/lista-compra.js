@@ -3,6 +3,16 @@
    Ver DOCUMENTACIÓN-TECNICA.md §5 para la explicación del algoritmo.
    ========================================================================== */
 
+// Pregunta si generar solo con el menú de la semana que se está viendo o con el de todas
+// las semanas planificadas, y lanza la generación correspondiente.
+function handleGenerarListaClick() {
+    const todas = confirm(
+        '¿Generar la lista con el menú de TODAS las semanas planificadas?\n\n' +
+        'Aceptar: todas las semanas.\nCancelar: solo la semana que estás viendo ahora.'
+    );
+    return todas ? generarListaCompraTodas() : generarListaCompraSemana();
+}
+
 async function generarListaCompraSemana() {
     const dias = getWeekDates(state.selectedWeekStart);
     await generarListaCompra(dias[0], dias[6]);
@@ -10,17 +20,26 @@ async function generarListaCompraSemana() {
     showToast('Lista de la compra generada a partir del menú de esta semana', 'success');
 }
 
+// Sin fechaFin: no hay límite superior, así que cubre todo el menú planificado a futuro
+// (fechaInicio se sigue anclando a hoy más abajo, igual que en generarListaCompraSemana).
+async function generarListaCompraTodas() {
+    await generarListaCompra();
+    renderListaCompra();
+    showToast('Lista de la compra generada a partir de todo el menú planificado', 'success');
+}
+
 // fechaInicio nunca cuenta días ya pasados: si se pide generar una semana que ya empezó
 // (p. ej. hoy es miércoles y la semana visible arrancaba el lunes), lo comido/planificado
-// en días anteriores a hoy no debe generar necesidad de compra retroactiva.
+// en días anteriores a hoy no debe generar necesidad de compra retroactiva. Sin fechaFin,
+// no se limita por arriba (usado por generarListaCompraTodas()).
 async function generarListaCompra(fechaInicio, fechaFin) {
     const hoy = todayISO();
-    if (fechaInicio < hoy) fechaInicio = hoy;
+    if (!fechaInicio || fechaInicio < hoy) fechaInicio = hoy;
 
     const necesidades = {}; // productoId -> cantidad total necesaria
 
     state.menuSemanal
-        .filter(e => e.activa && e.fecha >= fechaInicio && e.fecha <= fechaFin)
+        .filter(e => e.activa && e.fecha >= fechaInicio && (!fechaFin || e.fecha <= fechaFin))
         .forEach(entrada => {
             const receta = getReceta(entrada.recetaId);
             if (!receta) return;

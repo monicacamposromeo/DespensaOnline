@@ -151,7 +151,7 @@ function initMenuActions() {
     DOM.btnWeekPrev.addEventListener('click', () => goToWeek(-1));
     DOM.btnWeekNext.addEventListener('click', () => goToWeek(1));
     DOM.btnWeekToday.addEventListener('click', goToCurrentWeek);
-    DOM.btnGenerarLista.addEventListener('click', generarListaCompraSemana);
+    DOM.btnGenerarLista.addEventListener('click', handleGenerarListaClick);
     DOM.btnCloseModalMenuEntry.addEventListener('click', closeMenuEntryModal);
     DOM.btnCancelMenuEntry.addEventListener('click', closeMenuEntryModal);
     DOM.formMenuEntry.addEventListener('submit', handleMenuEntryFormSubmit);

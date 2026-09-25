@@ -18,3 +18,10 @@
 - [x] Separar en la compra por categoría de ingrediente, como está en la despensa el tema de las subcategorías.
 - [x] En los avisos, dentro de misma prioridad mostrar primero las cosas de hoy y dentro de las cosas de hoy mostrar primero desayuno, después comida y por último cena.
 - [x] A la hora de generar la lista de la compra, no hay que tener en cuenta las recetas de días anteriores, de hoy en adelante
+- [x] Cuando se trata de precocinado de elementos, mostrar durante todo el fin de semana (viernes-dábado-domingo) las alertas de descongelar y preconinar hasta que se cambié el guiso por el elemento ya cocinado.
+- [x] En la lista de la compra, ordena los elementos por categoría pero no pongas cual es la categoría, que ocupa mucho espacio entorpece el uso de la lista de la compra. Pon la categoría en la tarjeta como "detalle" del item a comprar.
+- [x] En la lista de la compra marca con algún distintivo las cosas que son urgentes y hay que comprar para hoy/mañana.
+- [x] Quiero poder añadir en los ingredientes en que supermercado los compro para que en la lista de la compra se pueda distinguir eso (un filtro, una etiqueta, otra lista, no sé como abordarlo para que sea útil)
+- [x] Quiero poder marcar como "ya descongelado" a los ingredinetes congelados y por tanto mostrar la alerta de que hay que descongelar, no solo el día anterior, si no hasta que se marque como descongelado o hasta que se pase el día de la receta.
+- [x] Quiero clarificar/separar las alertas por tipo (precocinado, descongelado, compra) para poder diferenciar alertas y que no queden todas mezcladas.
+- [x] ¿Hay forma de unificar las alertas que son de descongelar un ingrediente para un precocinado y la propia alerta de precocinado?

@@ -307,6 +307,19 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .alert-strip.alert-danger { background: var(--danger-light); border-left-color: var(--danger); color: var(--text-primary); }
 .alert-strip.alert-warn { background: var(--warning-light); border-left-color: var(--warning); color: var(--text-primary); }
 .alert-strip.alert-info { background: var(--primary-light); border-left-color: var(--primary); color: var(--text-primary); }
+.alerta-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* "Antes compra: …" / "Antes descongela: …" dentro de una tarjeta de precocinado / cocinar:
+   bloque propio con borde y color de peligro para que no pase desapercibido. */
+.alerta-antes {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px;
+    padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--danger);
+    background: var(--danger-light); color: var(--danger); font-size: 0.86rem; font-weight: 500;
+}
+.alerta-antes + .alerta-antes { margin-top: 6px; }
+.alerta-antes strong { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.78rem; }
+.alerta-antes .icon-sm { flex: 0 0 auto; }
+.alertas-seccion .section-subtitle { margin-top: 4px; }
+.alertas-seccion .alertas-caducidad { margin-bottom: 6px; }
 
 /* ==========================================================================
    Filas tipo tarjeta (despensa / listas con estado)
@@ -451,7 +464,11 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 11px 14px;
 }
 .compra-item.comprado { opacity: 0.5; }
-.compra-item.comprado .compra-item-nombre { text-decoration: line-through; }
+.compra-item.comprado .item-name { text-decoration: line-through; }
+.tag-supermercado {
+    display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px;
+    background: var(--primary-light); color: var(--primary);
+}
 .compra-item-checkbox { display: flex; flex: 0 0 auto; cursor: pointer; }
 .compra-item-checkbox input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
 .compra-item-info {
@@ -459,7 +476,6 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     background: none; border: none; padding: 0; text-align: left; color: inherit; font: inherit;
 }
 button.compra-item-info, label.compra-item-info { cursor: pointer; }
-.compra-item-nombre { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compra-item-cantidad { color: var(--text-secondary); font-size: 0.85rem; flex: 0 0 auto; }
 .row-delete { flex: 0 0 auto; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; }
 .row-delete:hover { color: var(--danger); }

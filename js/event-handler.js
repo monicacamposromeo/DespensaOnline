@@ -37,6 +37,9 @@ function initNavExitApp() {
 function initAlertasActions() {
     DOM.btnAlertas.addEventListener('click', openAlertasModal);
     DOM.btnCloseModalAlertas.addEventListener('click', closeAlertasModal);
+    DOM.btnVerProximasAlertas.addEventListener('click', goToProximasAlertas);
+    wireAccionesAlertas(DOM.alertasList);
+    wireAccionesAlertas(DOM.proximasAlertasList);
 }
 
 function initModalBackdropClose() {
@@ -100,6 +103,7 @@ function initConfigActions() {
     DOM.btnCancelEditProducto.addEventListener('click', cancelarEdicionProducto);
     DOM.formNuevaUbicacion.addEventListener('submit', handleNuevaUbicacionSubmit);
     wireCategoriaSelect(DOM.inProductoCategoria, DOM.inProductoCategoriaNueva);
+    wireSelectConNuevo(DOM.inProductoSupermercado, DOM.inProductoSupermercadoNuevo, SUPERMERCADO_NUEVO_VALUE);
     DOM.productosSearch.addEventListener('input', (e) => { state.productosFiltro.search = e.target.value; renderProductosConfig(); });
     DOM.productosSort.addEventListener('change', (e) => { state.productosFiltro.sort = e.target.value; renderProductosConfig(); });
 }
@@ -161,6 +165,11 @@ function initMenuActions() {
             const receta = getReceta(DOM.inMenuEntryReceta.value);
             if (receta) DOM.inMenuEntryComensales.value = receta.comensales_base;
         }
+        // Al cambiar de receta, la marca de precocinado de la anterior ya no vale.
+        const entrada = state.menuSemanal.find(m => m.id == state.editingMenuEntry);
+        DOM.inMenuEntryPrecocinado.checked = !!(entrada && entrada.precocinado && String(entrada.recetaId) === DOM.inMenuEntryReceta.value);
+        updateMenuEntryPrecocinadoVisibility();
+        renderMenuEntryDescongelados();
     });
 }
 
@@ -168,4 +177,10 @@ function initCompraActions() {
     DOM.formAddManualCompra.addEventListener('submit', handleAddManualCompra);
     DOM.btnLimpiarComprados.addEventListener('click', handleLimpiarComprados);
     DOM.btnCloseModalCompraInfo.addEventListener('click', closeCompraInfoModal);
+    DOM.compraChipsSupermercado.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.compraFiltro.supermercado = chip.dataset.value;
+        renderListaCompra();
+    });
 }

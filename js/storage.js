@@ -29,6 +29,7 @@ function nextId(collection) {
 function renderAllScreens() {
     populateProductoSelectors();
     populateCategoriaSelectors();
+    populateSupermercadoSelectors();
     populateUbicacionSelectors();
     populateRecetaSelectors();
     renderDespensa();
@@ -234,11 +235,11 @@ function checkLocalCache() {
    ========================================================================== */
 function loadDemoData() {
     state.productos = [
-        { id: 1, nombre: 'Huevos', categoria: 'Lácteos y huevos', unidad: 'ud', icono: '🥚', activa: true },
-        { id: 2, nombre: 'Leche', categoria: 'Lácteos y huevos', unidad: 'l', stock_minimo: 2, icono: '🥛', activa: true }, // ejemplo de reposición automática: solo hay 1l en la despensa
+        { id: 1, nombre: 'Huevos', categoria: 'Lácteos y huevos', unidad: 'ud', supermercado: 'Mercadona', icono: '🥚', activa: true },
+        { id: 2, nombre: 'Leche', categoria: 'Lácteos y huevos', unidad: 'l', stock_minimo: 2, supermercado: 'Mercadona', icono: '🥛', activa: true }, // ejemplo de reposición automática: solo hay 1l en la despensa
         { id: 3, nombre: 'Harina', categoria: 'Despensa seca', unidad: 'g', icono: '🌾', activa: true },
-        { id: 4, nombre: 'Tomate', categoria: 'Verdura', unidad: 'ud', icono: '🍅', activa: true },
-        { id: 5, nombre: 'Cebolla', categoria: 'Verdura', unidad: 'ud', icono: '🧅', activa: true },
+        { id: 4, nombre: 'Tomate', categoria: 'Verdura', unidad: 'ud', supermercado: 'Frutería', icono: '🍅', activa: true },
+        { id: 5, nombre: 'Cebolla', categoria: 'Verdura', unidad: 'ud', supermercado: 'Frutería', icono: '🧅', activa: true },
         { id: 6, nombre: 'Arroz', categoria: 'Despensa seca', unidad: 'g', icono: '🍚', activa: true },
         { id: 7, nombre: 'Pechuga de pollo', categoria: 'Carne', unidad: 'g', icono: '🍗', activa: true },
         { id: 8, nombre: 'Pasta', categoria: 'Despensa seca', unidad: 'g', icono: '🍝', activa: true },
@@ -305,7 +306,8 @@ function applyWriteAction(action, data, persist) {
             const id = nextId(state.productos);
             state.productos.push({
                 id, nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud',
-                stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null, icono: data.icono || '🍽️', activa: true
+                stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null,
+                supermercado: data.supermercado || null, icono: data.icono || '🍽️', activa: true
             });
             commit();
             return { success: true, id, message: 'Producto creado' };
@@ -317,6 +319,7 @@ function applyWriteAction(action, data, persist) {
             if (data.categoria !== undefined) p.categoria = data.categoria;
             if (data.unidad !== undefined) p.unidad = data.unidad;
             if (data.stock_minimo !== undefined) p.stock_minimo = data.stock_minimo ? parseFloat(data.stock_minimo) : null;
+            if (data.supermercado !== undefined) p.supermercado = data.supermercado || null;
             if (data.icono !== undefined) p.icono = data.icono;
             if (data.activa !== undefined) p.activa = !!data.activa;
             commit();
@@ -443,6 +446,8 @@ function applyWriteAction(action, data, persist) {
             if (!m) return { success: false, error: 'Entrada de menú no encontrada' };
             if (data.recetaId !== undefined) m.recetaId = Number(data.recetaId);
             if (data.comensales !== undefined) m.comensales = Number(data.comensales) || 1;
+            if (data.precocinado !== undefined) m.precocinado = !!data.precocinado;
+            if (data.descongelados !== undefined) m.descongelados = (data.descongelados || []).map(Number);
             commit();
             return { success: true, message: 'Menú actualizado' };
         }

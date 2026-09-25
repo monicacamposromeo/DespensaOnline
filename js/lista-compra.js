@@ -105,56 +105,92 @@ async function actualizarListaReposicion() {
     }
 }
 
-// Comprados al final (como antes) y, dentro de cada grupo, alfabético por nombre de
-// producto — para que la clasificación por categoría de abajo tenga un orden estable.
+// Comprados al final; el resto ordenado por categoría del producto (productos.categoria,
+// alfabética y "sin categoría" al final) y, dentro de cada categoría, por nombre. No se
+// pintan encabezados de categoría (ocupaban mucho al usar la lista en la tienda): la
+// categoría va como detalle de cada fila (compraItemMetaHtml()), y el orden basta para
+// que lo de la misma sección del súper quede junto.
 function compararItemsCompra(a, b) {
     if (a.comprado !== b.comprado) return a.comprado ? 1 : -1;
-    const nombreA = getProducto(a.productoId)?.nombre || '';
-    const nombreB = getProducto(b.productoId)?.nombre || '';
-    return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
+    const productoA = getProducto(a.productoId);
+    const productoB = getProducto(b.productoId);
+    const categoriaA = (productoA?.categoria || '').trim();
+    const categoriaB = (productoB?.categoria || '').trim();
+    if (categoriaA !== categoriaB) {
+        if (!categoriaA) return 1;
+        if (!categoriaB) return -1;
+        const cmp = categoriaA.localeCompare(categoriaB, 'es', { sensitivity: 'base' });
+        if (cmp !== 0) return cmp;
+    }
+    return (productoA?.nombre || '').localeCompare(productoB?.nombre || '', 'es', { sensitivity: 'base' });
 }
 
-// Sub-agrupa una sección de la lista de la compra por categoría del producto
-// (productos.categoria), mismo patrón de clasificación que la Despensa
-// (agruparPorDetalleHtml(), js/despensa.js): un <h3 class="section-subtitle"> por
-// categoría, en orden alfabético y "Sin categoría" al final.
-function agruparCompraPorCategoriaHtml(items) {
-    const porCategoria = new Map();
-    items.forEach(item => {
-        const key = (getProducto(item.productoId)?.categoria || '').trim().toLowerCase();
-        if (!porCategoria.has(key)) porCategoria.set(key, []);
-        porCategoria.get(key).push(item);
-    });
+// ¿Hace falta comprarlo ya? 'hoy' / 'manana' si el menú de hoy o de mañana necesita más de
+// lo que hay (mismo cálculo que la alerta "Compra X para hoy" y su simulación de mañana en
+// Próximas alertas: getNecesidadesDelDia() + getStockProyectado(), js/alertas.js). Vale
+// para cualquier fila, venga del menú, de la reposición o añadida a mano: lo urgente es
+// el producto, no el motivo por el que está en la lista.
+function getUrgenciaCompra(productoId) {
+    const hoy = todayISO();
+    for (const [fecha, urgencia] of [[hoy, 'hoy'], [addDaysToISO(hoy, 1), 'manana']]) {
+        const necesaria = getNecesidadesDelDia(fecha)[productoId] || 0;
+        if (round2(necesaria - getStockProyectado(productoId, fecha)) > 0) return urgencia;
+    }
+    return null;
+}
 
-    const claves = [...porCategoria.keys()].sort((a, b) => {
-        if (!a && !b) return 0;
-        if (!a) return 1;
-        if (!b) return -1;
-        return a.localeCompare(b, 'es', { sensitivity: 'base' });
-    });
+function compraUrgenciaHtml(item) {
+    if (item.comprado) return '';
+    const urgencia = getUrgenciaCompra(String(item.productoId));
+    if (urgencia === 'hoy') return '<span class="status-pill danger" title="Lo necesitas para el menú de hoy">Hoy</span>';
+    if (urgencia === 'manana') return '<span class="status-pill warn" title="Lo necesitas para el menú de mañana">Mañana</span>';
+    return '';
+}
 
-    return claves.map(key => {
-        const itemsCategoria = porCategoria.get(key);
-        const titulo = key ? getProducto(itemsCategoria[0].productoId).categoria : 'Sin categoría';
-        return `<h3 class="section-subtitle">${escapeHtml(titulo)}</h3>` + itemsCategoria.map(compraItemHtml).join('');
-    }).join('');
+// Filtro por supermercado (productos.supermercado): 'todos', 'sin' (productos sin súper
+// asignado) o el nombre de un supermercado.
+const SUPERMERCADO_FILTRO_SIN = '__sin__';
+
+function pasaFiltroSupermercado(item) {
+    const filtro = state.compraFiltro.supermercado;
+    if (filtro === 'todos') return true;
+    const supermercado = getProducto(item.productoId)?.supermercado || '';
+    return filtro === SUPERMERCADO_FILTRO_SIN ? !supermercado : supermercado === filtro;
+}
+
+// Chips Todos / cada supermercado / Sin supermercado. Solo se muestran si algún producto
+// tiene supermercado asignado; si el filtro activo ya no existe, vuelve a "Todos".
+function renderCompraChipsSupermercado() {
+    const supermercados = getSupermercadosUnicos();
+    DOM.compraChipsSupermercado.classList.toggle('hidden', supermercados.length === 0);
+    const valores = ['todos', ...supermercados, SUPERMERCADO_FILTRO_SIN];
+    if (!valores.includes(state.compraFiltro.supermercado)) state.compraFiltro.supermercado = 'todos';
+
+    const etiqueta = v => v === 'todos' ? 'Todos' : v === SUPERMERCADO_FILTRO_SIN ? 'Sin supermercado' : v;
+    DOM.compraChipsSupermercado.innerHTML = valores.map(v =>
+        `<button type="button" class="chip ${v === state.compraFiltro.supermercado ? 'active' : ''}" data-value="${escapeHtml(v)}">${escapeHtml(etiqueta(v))}</button>`
+    ).join('');
 }
 
 function renderListaCompra() {
-    const menuItems = state.listaCompra.filter(li => li.origen === 'menu').sort(compararItemsCompra);
-    const minimoItems = state.listaCompra.filter(li => li.origen === 'minimo').sort(compararItemsCompra);
-    const manualItems = state.listaCompra.filter(li => li.origen === 'manual').sort(compararItemsCompra);
+    renderCompraChipsSupermercado();
+    const filtrando = state.compraFiltro.supermercado !== 'todos';
+    const visibles = state.listaCompra.filter(pasaFiltroSupermercado);
+    const menuItems = visibles.filter(li => li.origen === 'menu').sort(compararItemsCompra);
+    const minimoItems = visibles.filter(li => li.origen === 'minimo').sort(compararItemsCompra);
+    const manualItems = visibles.filter(li => li.origen === 'manual').sort(compararItemsCompra);
+    const vacioFiltrado = '<p class="empty-state-inline">Nada de este supermercado en esta sección.</p>';
 
     DOM.compraEmpty.classList.toggle('hidden', state.listaCompra.length > 0);
     DOM.compraListMenu.innerHTML = menuItems.length > 0
-        ? agruparCompraPorCategoriaHtml(menuItems)
-        : '<p class="empty-state-inline">Genera la lista desde el menú semanal.</p>';
+        ? menuItems.map(compraItemHtml).join('')
+        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Genera la lista desde el menú semanal.</p>';
     DOM.compraListMinimo.innerHTML = minimoItems.length > 0
-        ? agruparCompraPorCategoriaHtml(minimoItems)
-        : '<p class="empty-state-inline">Ningún producto con stock mínimo está por debajo de lo configurado.</p>';
+        ? minimoItems.map(compraItemHtml).join('')
+        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Ningún producto con stock mínimo está por debajo de lo configurado.</p>';
     DOM.compraListManual.innerHTML = manualItems.length > 0
-        ? agruparCompraPorCategoriaHtml(manualItems)
-        : '<p class="empty-state-inline">Sin productos añadidos a mano.</p>';
+        ? manualItems.map(compraItemHtml).join('')
+        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Sin productos añadidos a mano.</p>';
 
     [DOM.compraListMenu, DOM.compraListMinimo, DOM.compraListManual].forEach(container => {
         container.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
@@ -181,6 +217,17 @@ function compraMinimoMetaHtml(productoId, producto) {
     return `Mínimo ${escapeHtml(formatCantidad(minimo, producto.unidad))} · Tienes ${escapeHtml(formatCantidad(disponible, producto.unidad))}`;
 }
 
+// Detalle bajo el nombre: la categoría del producto (sustituye a los encabezados de
+// categoría), su supermercado como etiqueta y, en "Reposición automática", el mínimo y
+// lo que tienes.
+function compraItemMetaHtml(item, producto) {
+    const partes = [];
+    if (producto.supermercado) partes.push(`<span class="tag-supermercado">${escapeHtml(producto.supermercado)}</span>`);
+    if (producto.categoria) partes.push(escapeHtml(producto.categoria));
+    if (item.origen === 'minimo') partes.push(compraMinimoMetaHtml(item.productoId, producto));
+    return partes.length > 0 ? `<span class="item-meta">${partes.join(' · ')}</span>` : '';
+}
+
 function compraItemHtml(item) {
     const producto = getProducto(item.productoId);
     if (!producto) return '';
@@ -190,9 +237,7 @@ function compraItemHtml(item) {
     // (una <label> más, apuntando al mismo checkbox).
     const infoTag = item.origen === 'menu' ? 'button' : 'label';
     const infoAttrs = item.origen === 'menu' ? `type="button" data-compra-info="${item.id}"` : `for="${checkboxId}"`;
-    const nombreHtml = item.origen === 'minimo'
-        ? `<span class="item-main"><span class="item-name">${escapeHtml(producto.nombre)}</span><span class="item-meta">${compraMinimoMetaHtml(item.productoId, producto)}</span></span>`
-        : `<span class="compra-item-nombre">${escapeHtml(producto.nombre)}</span>`;
+    const nombreHtml = `<span class="item-main"><span class="item-name">${escapeHtml(producto.nombre)}</span>${compraItemMetaHtml(item, producto)}</span>`;
     return `
         <div class="compra-item ${item.comprado ? 'comprado' : ''}">
             <label class="compra-item-checkbox">
@@ -201,6 +246,7 @@ function compraItemHtml(item) {
             <${infoTag} class="compra-item-info" ${infoAttrs}>
                 <span class="mono mono-sm">${escapeHtml(monogramLetter(producto.nombre))}</span>
                 ${nombreHtml}
+                ${compraUrgenciaHtml(item)}
                 <span class="compra-item-cantidad">${formatCantidad(item.cantidad, producto.unidad)}</span>
             </${infoTag}>
             <button type="button" class="row-delete" data-compra-delete="${item.id}" title="Quitar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>

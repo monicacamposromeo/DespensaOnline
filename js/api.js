@@ -191,7 +191,8 @@ async function handleSupabaseWriteAction(action, method, data) {
             case 'producto': {
                 const [row] = await supabaseWrite('productos', 'POST', {
                     nombre: data.nombre, categoria: data.categoria || '', unidad: data.unidad || 'ud',
-                    stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null, icono: data.icono || '', activa: true
+                    stock_minimo: data.stock_minimo ? parseFloat(data.stock_minimo) : null,
+                    supermercado: data.supermercado || null, icono: data.icono || '', activa: true
                 });
                 state.productos.push(row);
                 return { success: true, id: row.id, message: 'Producto creado' };
@@ -200,6 +201,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 const payload = {};
                 ['nombre', 'categoria', 'unidad', 'icono'].forEach(k => { if (data[k] !== undefined) payload[k] = data[k]; });
                 if (data.stock_minimo !== undefined) payload.stock_minimo = data.stock_minimo ? parseFloat(data.stock_minimo) : null;
+                if (data.supermercado !== undefined) payload.supermercado = data.supermercado || null;
                 if (data.activa !== undefined) payload.activa = !!data.activa;
                 const [row] = await supabaseWrite(`productos?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Producto no encontrado' };
@@ -330,6 +332,8 @@ async function handleSupabaseWriteAction(action, method, data) {
                 const payload = {};
                 if (data.recetaId !== undefined) payload.recetaId = Number(data.recetaId);
                 if (data.comensales !== undefined) payload.comensales = Number(data.comensales) || 1;
+                if (data.precocinado !== undefined) payload.precocinado = !!data.precocinado;
+                if (data.descongelados !== undefined) payload.descongelados = (data.descongelados || []).map(Number);
                 const [row] = await supabaseWrite(`menu_semanal?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Entrada de menú no encontrada' };
                 Object.assign(state.menuSemanal.find(m => m.id == data.id) || {}, row);

@@ -48,6 +48,12 @@ function handleRoute() {
     else if (hash === '#menu') renderMenuSemanal();
     else if (hash === '#compra') renderListaCompra();
     else if (hash === '#configuracion') { renderProductosConfig(); renderUbicacionesConfig(); }
+    else if (hash === '#proximas-alertas') {
+        // No tiene entrada en la barra de navegación (se llega desde el modal de alertas),
+        // así que el título no sale del bucle de nav-items de arriba.
+        DOM.barTitle.textContent = 'Próximas alertas';
+        renderProximasAlertas();
+    }
 }
 
 /* ==========================================================================

@@ -55,7 +55,7 @@ function menuCellHtml(fecha, tipo, entradas) {
         return `
             <button type="button" class="menu-grid-entry" data-entrada-id="${entrada.id}">
                 <strong title="${escapeHtml(nombre)}">${escapeHtml(nombre)}</strong>
-                <span class="menu-grid-comensales">${entrada.comensales} comensales</span>
+                <span class="menu-grid-comensales">${entrada.comensales} comensales${precocinadoSufijo(entrada, receta)}</span>
             </button>
         `;
     }).join('');
@@ -102,7 +102,7 @@ function renderAgendaDia() {
             ? entradas.map(entrada => {
                 const receta = getReceta(entrada.recetaId);
                 return `<button type="button" class="meal-row" data-entrada-id="${entrada.id}">
-                    <span class="meal-value">${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}</span>
+                    <span class="meal-value">${escapeHtml(receta ? receta.nombre : 'Receta eliminada')}${precocinadoSufijo(entrada, receta)}</span>
                     <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
                 </button>`;
             }).join('')
@@ -144,8 +144,53 @@ function openMenuEntryModal(fecha, tipoComida, entrada = null) {
     DOM.inMenuEntryTipo.value = tipoComida;
     DOM.inMenuEntryReceta.value = entrada ? entrada.recetaId : (state.recetas.find(r => r.activa)?.id || '');
     DOM.inMenuEntryComensales.value = entrada ? entrada.comensales : (getReceta(DOM.inMenuEntryReceta.value)?.comensales_base || 2);
+    DOM.inMenuEntryPrecocinado.checked = !!(entrada && entrada.precocinado);
+    updateMenuEntryPrecocinadoVisibility();
+    renderMenuEntryDescongelados();
     DOM.btnDeleteMenuEntry.classList.toggle('hidden', !entrada);
     DOM.modalMenuEntry.classList.remove('hidden');
+}
+
+// Casillas "Ya descongelado" por ingrediente (menu_semanal.descongelados), solo al editar
+// un plato ya planificado: se listan los ingredientes de la receta elegida que tienes en el
+// congelador (getLotesCongelados(), js/alertas.js) o que ya estaban marcados. Si se cambia
+// de receta en el modal, las marcas anteriores no valen y salen todas desmarcadas.
+function renderMenuEntryDescongelados() {
+    const entrada = state.menuSemanal.find(m => m.id == state.editingMenuEntry);
+    const receta = getReceta(DOM.inMenuEntryReceta.value);
+    const mismaReceta = entrada && receta && String(entrada.recetaId) === String(receta.id);
+    const marcados = mismaReceta ? getDescongeladosEntrada(entrada) : [];
+
+    const vistos = new Set();
+    const candidatos = entrada && receta
+        ? getIngredientesReceta(receta.id)
+            .map(ing => getProducto(ing.productoId))
+            .filter(p => {
+                if (!p || vistos.has(String(p.id))) return false;
+                vistos.add(String(p.id));
+                return marcados.includes(String(p.id)) || getLotesCongelados(p.id).length > 0;
+            })
+        : [];
+
+    DOM.menuEntryDescongeladosField.classList.toggle('hidden', candidatos.length === 0);
+    DOM.menuEntryDescongeladosList.innerHTML = candidatos.map(p => `
+        <label class="checkbox-field">
+            <input type="checkbox" value="${p.id}" data-descongelado-check ${marcados.includes(String(p.id)) ? 'checked' : ''}>
+            Ya descongelado: ${escapeHtml(p.nombre)}
+        </label>
+    `).join('');
+}
+
+// "Ya lo he precocinado" solo tiene sentido al editar un plato ya planificado cuya receta
+// requiera precocinado (recetaRequierePrecocinado(), js/state.js).
+function updateMenuEntryPrecocinadoVisibility() {
+    const visible = !!state.editingMenuEntry && recetaRequierePrecocinado(getReceta(DOM.inMenuEntryReceta.value));
+    DOM.menuEntryPrecocinadoField.classList.toggle('hidden', !visible);
+}
+
+// Texto "· precocinado" junto al plato en la rejilla/agenda cuando ya se marcó.
+function precocinadoSufijo(entrada, receta) {
+    return entrada.precocinado && recetaRequierePrecocinado(receta) ? ' · precocinado' : '';
 }
 
 function closeMenuEntryModal() {
@@ -161,15 +206,37 @@ async function handleMenuEntryFormSubmit(e) {
         recetaId: DOM.inMenuEntryReceta.value,
         comensales: DOM.inMenuEntryComensales.value
     };
+    const entradaId = state.editingMenuEntry;
+    let nuevosDescongelados = [];
+    if (entradaId) {
+        // Si la casilla no se ve (la receta nueva no requiere precocinado) y la entrada estaba
+        // marcada, se desmarca: la marca era de la receta anterior.
+        const entrada = state.menuSemanal.find(m => m.id == entradaId);
+        if (!DOM.menuEntryPrecocinadoField.classList.contains('hidden')) payload.precocinado = DOM.inMenuEntryPrecocinado.checked;
+        else if (entrada && entrada.precocinado) payload.precocinado = false;
 
-    const result = state.editingMenuEntry
-        ? await apiRequest('editar_menu_entry', 'PATCH', { id: state.editingMenuEntry, ...payload })
+        // Descongelados: lo que quede marcado en las casillas (se puede desmarcar). Los recién
+        // marcados, además, pasan sus lotes a la Nevera tras guardar (marcarDescongelado()).
+        const mismaReceta = entrada && String(entrada.recetaId) === String(payload.recetaId);
+        const antes = entrada && mismaReceta ? getDescongeladosEntrada(entrada) : [];
+        const marcados = [...DOM.menuEntryDescongeladosList.querySelectorAll('[data-descongelado-check]:checked')].map(cb => cb.value);
+        if (!DOM.menuEntryDescongeladosField.classList.contains('hidden')) payload.descongelados = marcados;
+        else if (entrada && getDescongeladosEntrada(entrada).length > 0 && !mismaReceta) payload.descongelados = [];
+        nuevosDescongelados = marcados.filter(id => !antes.includes(id));
+    }
+
+    const result = entradaId
+        ? await apiRequest('editar_menu_entry', 'PATCH', { id: entradaId, ...payload })
         : await apiRequest('menu_entry', 'POST', payload);
 
     if (result && result.success) {
-        showToast(result.message, 'success');
         closeMenuEntryModal();
-        renderMenuSemanal();
+        if (nuevosDescongelados.length > 0) {
+            await marcarDescongelado(entradaId, nuevosDescongelados, { yaGuardado: true }); // su propio toast y repintado
+        } else {
+            showToast(result.message, 'success');
+            renderMenuSemanal();
+        }
     } else {
         showToast(result?.error || 'Error al guardar', 'error');
     }

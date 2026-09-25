@@ -7,6 +7,7 @@ const TIPO_COMIDA_LABELS = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena
 const CATEGORIA_RECETA_LABELS = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena', postre: 'Postre', snack: 'Snack' };
 const DIAS_SEMANA_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIAS_ALERTA_CADUCIDAD = 3;
+const DIAS_PROXIMAS_ALERTAS = 7;
 
 // App State
 const state = {
@@ -37,6 +38,7 @@ const state = {
     despensaFiltro: { search: '', ubicacion: 'todas' },
     recetasFiltro: { categoria: 'todas' },
     productosFiltro: { search: '', sort: 'nombre-asc' },
+    compraFiltro: { supermercado: 'todos' },
 
     loadedScreens: { despensa: false, recetas: false, menu: false, compra: false, configuracion: false }
 };
@@ -80,6 +82,9 @@ const DOM = {
     modalAlertas: document.getElementById('modal-alertas'),
     btnCloseModalAlertas: document.getElementById('btn-close-modal-alertas'),
     alertasList: document.getElementById('alertas-list'),
+    btnVerProximasAlertas: document.getElementById('btn-ver-proximas-alertas'),
+    screenProximasAlertas: document.getElementById('screen-proximas-alertas'),
+    proximasAlertasList: document.getElementById('proximas-alertas-list'),
 
     // Despensa screen
     despensaSearch: document.getElementById('despensa-search'),
@@ -107,6 +112,7 @@ const DOM = {
 
     // Lista de la compra screen
     formAddManualCompra: document.getElementById('form-add-manual-compra'),
+    compraChipsSupermercado: document.getElementById('compra-chips-supermercado'),
     inCompraProducto: document.getElementById('in-compra-producto'),
     inCompraCantidad: document.getElementById('in-compra-cantidad'),
     btnLimpiarComprados: document.getElementById('btn-limpiar-comprados'),
@@ -134,6 +140,8 @@ const DOM = {
     inProductoCategoriaNueva: document.getElementById('in-producto-categoria-nueva'),
     inProductoUnidad: document.getElementById('in-producto-unidad'),
     inProductoStockMinimo: document.getElementById('in-producto-stock-minimo'),
+    inProductoSupermercado: document.getElementById('in-producto-supermercado'),
+    inProductoSupermercadoNuevo: document.getElementById('in-producto-supermercado-nuevo'),
     inProductoIcono: document.getElementById('in-producto-icono'),
     btnSubmitProducto: document.getElementById('btn-submit-producto'),
     btnCancelEditProducto: document.getElementById('btn-cancel-edit-producto'),
@@ -206,6 +214,10 @@ const DOM = {
     inMenuEntryTipo: document.getElementById('in-menu-entry-tipo'),
     inMenuEntryReceta: document.getElementById('in-menu-entry-receta'),
     inMenuEntryComensales: document.getElementById('in-menu-entry-comensales'),
+    menuEntryPrecocinadoField: document.getElementById('menu-entry-precocinado-field'),
+    inMenuEntryPrecocinado: document.getElementById('in-menu-entry-precocinado'),
+    menuEntryDescongeladosField: document.getElementById('menu-entry-descongelados-field'),
+    menuEntryDescongeladosList: document.getElementById('menu-entry-descongelados-list'),
     btnDeleteMenuEntry: document.getElementById('btn-delete-menu-entry'),
     btnCancelMenuEntry: document.getElementById('btn-cancel-menu-entry')
 };
@@ -253,6 +265,13 @@ function getUbicacion(id) {
 // son valores derivados de productos.categoria, para ofrecerlas como desplegable.
 function getCategoriasUnicas() {
     const set = new Set(state.productos.filter(p => p.activa && p.categoria).map(p => p.categoria));
+    return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+}
+
+// Supermercados en uso en el catálogo (productos.supermercado): igual que las categorías,
+// no es una tabla propia sino valores derivados, para el desplegable y los chips de filtro.
+function getSupermercadosUnicos() {
+    const set = new Set(state.productos.filter(p => p.activa && p.supermercado).map(p => p.supermercado));
     return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 }
 
@@ -337,8 +356,9 @@ function getStockDisponible(productoId) {
 }
 
 // Lotes activos caducados o a punto de caducar (umbral en días), con su estado clasificado.
-function getLotesPorCaducar(diasAviso = DIAS_ALERTA_CADUCIDAD) {
-    const hoy = new Date();
+// `fechaRefISO` permite calcularlo como si hoy fuera otro día (pantalla Próximas alertas).
+function getLotesPorCaducar(diasAviso = DIAS_ALERTA_CADUCIDAD, fechaRefISO = null) {
+    const hoy = fechaRefISO ? new Date(fechaRefISO + 'T00:00:00') : new Date();
     hoy.setHours(0, 0, 0, 0);
     const limite = new Date(hoy);
     limite.setDate(limite.getDate() + diasAviso);

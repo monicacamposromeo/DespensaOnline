@@ -40,6 +40,7 @@
         <symbol id="ic-chev-right" viewBox="0 0 24 24"><path d="M9.5 5 16 12l-6.5 7"/></symbol>
         <symbol id="ic-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
         <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v11.5"/><path d="M7.5 11.5 12 16l4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+        <symbol id="ic-snow" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/><path d="M9.5 4.5 12 6.5l2.5-2"/><path d="M9.5 19.5 12 17.5l2.5 2"/></symbol>
         <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14.5 6 10.5Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
     </svg>
 
@@ -174,6 +175,8 @@
                         <button type="submit" class="btn btn-primary">Añadir</button>
                     </form>
 
+                    <div class="chips hidden" id="compra-chips-supermercado"></div>
+
                     <div class="compra-section">
                         <h2 class="section-title">Del menú</h2>
                         <div id="compra-list-menu" class="compra-list"></div>
@@ -190,6 +193,12 @@
 
                     <p class="empty-state hidden" id="compra-empty">La lista de la compra está vacía.</p>
                     <button class="text-btn" id="btn-limpiar-comprados">Quitar comprados</button>
+                </section>
+
+                <!-- ================= PRÓXIMAS ALERTAS (se llega desde el modal de alertas) ================= -->
+                <section class="app-screen" id="screen-proximas-alertas">
+                    <p class="config-hint">Lo que te irá saltando en las alertas los próximos 7 días, según tu menú y tu despensa. Cada aviso sale solo el primer día en que salta, salvo los de precocinar, que se repiten hasta que marques "Ya precocinado". Lo de hoy lo tienes en la campana.</p>
+                    <div id="proximas-alertas-list"></div>
                 </section>
 
                 <!-- ================= CONFIGURACIÓN ================= -->
@@ -248,11 +257,15 @@
                                     <option value="l">l</option>
                                 </select>
                                 <input type="number" id="in-producto-stock-minimo" class="form-input" placeholder="Stock mínimo (opcional)" min="0" step="0.01">
+                                <div class="field-with-add">
+                                    <select id="in-producto-supermercado" class="form-select" aria-label="Supermercado"></select>
+                                    <input type="text" id="in-producto-supermercado-nuevo" class="form-input hidden" placeholder="Nombre del supermercado nuevo">
+                                </div>
                                 <input type="hidden" id="in-producto-icono" value="">
                                 <button type="submit" class="btn btn-primary" id="btn-submit-producto">Añadir</button>
                                 <button type="button" class="btn btn-secondary hidden" id="btn-cancel-edit-producto">Cancelar</button>
                             </form>
-                            <p class="config-hint">Si pones un stock mínimo, cuando la despensa baje de esa cantidad el producto se añadirá solo a "Reposición automática" en la Lista de la Compra.</p>
+                            <p class="config-hint">Si pones un stock mínimo, cuando la despensa baje de esa cantidad el producto se añadirá solo a "Reposición automática" en la Lista de la Compra. El supermercado (opcional) sirve para filtrar la Lista de la Compra por tienda.</p>
                             <div class="catalog-toolbar">
                                 <input type="text" id="productos-search" class="search-input" placeholder="Buscar producto…">
                                 <select id="productos-sort" class="form-select">
@@ -454,6 +467,18 @@
                     <label for="in-menu-entry-comensales">Comensales</label>
                     <input type="number" id="in-menu-entry-comensales" class="form-input" min="1" value="2">
                 </div>
+                <div class="form-group hidden" id="menu-entry-precocinado-field">
+                    <label class="checkbox-field">
+                        <input type="checkbox" id="in-menu-entry-precocinado">
+                        Ya lo he precocinado
+                    </label>
+                    <p class="config-hint">Si es un plato completo (un guiso), mientras no lo marques las alertas te recordarán precocinarlo (y descongelar lo necesario) cada día desde el sábado anterior. Si solo es un ingrediente, se te recuerda el mismo día.</p>
+                </div>
+                <div class="form-group hidden" id="menu-entry-descongelados-field">
+                    <label>Ingredientes congelados</label>
+                    <div id="menu-entry-descongelados-list"></div>
+                    <p class="config-hint">Marca lo que ya hayas sacado a descongelar: dejará de avisarte para este plato y sus lotes pasarán a la Nevera en la despensa.</p>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-danger hidden" id="btn-delete-menu-entry">Quitar del menú</button>
                     <button type="button" class="btn btn-secondary" id="btn-cancel-menu-entry">Cancelar</button>
@@ -472,6 +497,7 @@
                 <button class="modal-close" id="btn-close-modal-alertas" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
             </div>
             <div id="alertas-list" class="alertas-caducidad"></div>
+            <button type="button" class="btn btn-secondary btn-block" id="btn-ver-proximas-alertas">Ver próximas alertas<svg class="icon-sm"><use href="#ic-chev-right"/></svg></button>
         </div>
     </div>
 

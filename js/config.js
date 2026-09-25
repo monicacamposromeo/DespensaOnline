@@ -20,7 +20,7 @@ function renderProductosConfig() {
     DOM.productosList.innerHTML = productos.length > 0
         ? productos.map(p => {
             const minimo = parseFloat(p.stock_minimo) || 0;
-            const metaMinimo = minimo > 0 ? ` · mín. ${formatCantidad(minimo, p.unidad)}` : '';
+            const metaMinimo = (minimo > 0 ? ` · mín. ${formatCantidad(minimo, p.unidad)}` : '') + (p.supermercado ? ` · ${escapeHtml(p.supermercado)}` : '');
             return `
             <div class="catalog-row catalog-row-clickable" data-producto-edit="${p.id}" title="Editar producto">
                 <span class="mono mono-sm">${escapeHtml(monogramLetter(p.nombre))}</span>
@@ -56,6 +56,9 @@ function openProductoEdit(producto) {
     DOM.inProductoCategoriaNueva.classList.add('hidden');
     DOM.inProductoUnidad.value = producto.unidad;
     DOM.inProductoStockMinimo.value = producto.stock_minimo || '';
+    DOM.inProductoSupermercado.value = producto.supermercado || '';
+    DOM.inProductoSupermercadoNuevo.value = '';
+    DOM.inProductoSupermercadoNuevo.classList.add('hidden');
     DOM.inProductoIcono.value = producto.icono || '';
     DOM.btnSubmitProducto.textContent = 'Guardar cambios';
     DOM.btnCancelEditProducto.classList.remove('hidden');
@@ -66,6 +69,7 @@ function cancelarEdicionProducto() {
     state.editingProductoId = null;
     DOM.formNuevoProducto.reset();
     DOM.inProductoCategoriaNueva.classList.add('hidden');
+    DOM.inProductoSupermercadoNuevo.classList.add('hidden');
     DOM.btnSubmitProducto.textContent = 'Añadir';
     DOM.btnCancelEditProducto.classList.add('hidden');
 }
@@ -118,6 +122,7 @@ async function handleNuevoProductoSubmit(e) {
         categoria: resolveCategoriaValue(DOM.inProductoCategoria, DOM.inProductoCategoriaNueva),
         unidad: DOM.inProductoUnidad.value,
         stock_minimo: DOM.inProductoStockMinimo.value || null,
+        supermercado: resolveSelectConNuevo(DOM.inProductoSupermercado, DOM.inProductoSupermercadoNuevo, SUPERMERCADO_NUEVO_VALUE) || null,
         icono: DOM.inProductoIcono.value || ''
     };
 
@@ -139,8 +144,10 @@ async function handleNuevoProductoSubmit(e) {
             renderProductosConfig();
             populateProductoSelectors();
             populateCategoriaSelectors();
+            populateSupermercadoSelectors();
             renderDespensa(); // ya recalcula la reposición automática al terminar (stock_minimo pudo cambiar)
             renderRecetas();
+            renderListaCompra(); // categoría/supermercado se ven en la lista
             showToast(result.message, 'success');
         } else {
             showToast(result?.error || 'Error al guardar', 'error');
@@ -152,9 +159,11 @@ async function handleNuevoProductoSubmit(e) {
     if (result && result.success) {
         DOM.formNuevoProducto.reset();
         DOM.inProductoCategoriaNueva.classList.add('hidden');
+        DOM.inProductoSupermercadoNuevo.classList.add('hidden');
         renderProductosConfig();
         populateProductoSelectors();
         populateCategoriaSelectors();
+        populateSupermercadoSelectors();
         await actualizarListaReposicion();
         renderListaCompra();
         showToast(result.message, 'success');
@@ -171,8 +180,10 @@ async function handleDeleteProducto(id) {
         renderProductosConfig();
         populateProductoSelectors();
         populateCategoriaSelectors();
+        populateSupermercadoSelectors();
         renderDespensa(); // ya recalcula la reposición automática al terminar
         renderRecetas();
+        renderListaCompra();
         showToast(result.message, 'success');
     }
 }
@@ -224,6 +235,26 @@ function populateCategoriaSelectors() {
     if (DOM.inLoteNuevoProductoCategoria) {
         DOM.inLoteNuevoProductoCategoria.innerHTML = buildCategoriaOptionsHtml();
     }
+}
+
+/* ==========================================================================
+   Supermercados: mismo patrón que las categorías (valores ya usados en
+   productos.supermercado + "+ Nuevo supermercado…"). Ver §9 de la documentación.
+   ========================================================================== */
+const SUPERMERCADO_NUEVO_VALUE = '__nuevo_supermercado__';
+
+function buildSupermercadoOptionsHtml() {
+    const opciones = getSupermercadosUnicos()
+        .map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+        .join('');
+    return `<option value="">Sin supermercado</option>${opciones}<option value="${SUPERMERCADO_NUEVO_VALUE}">+ Nuevo supermercado…</option>`;
+}
+
+function populateSupermercadoSelectors() {
+    if (!DOM.inProductoSupermercado) return;
+    const actual = DOM.inProductoSupermercado.value;
+    DOM.inProductoSupermercado.innerHTML = buildSupermercadoOptionsHtml();
+    if (Array.from(DOM.inProductoSupermercado.options).some(o => o.value === actual)) DOM.inProductoSupermercado.value = actual;
 }
 
 /* ==========================================================================

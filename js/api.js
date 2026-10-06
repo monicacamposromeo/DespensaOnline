@@ -116,13 +116,26 @@ async function loadSupabaseData() {
     state.recetaIngredientes = recetaIngredientes || [];
     state.menuSemanal = menuSemanal || [];
     state.listaCompra = listaCompra || [];
+    state.ajustes = await cargarAjustesSupabase();
+}
+
+// Tabla `ajustes` (clave text PK, valor jsonb) → { clave: valor }. Si la tabla aún no
+// existe (no se ha ejecutado su SQL), la app sigue funcionando con los valores por defecto.
+async function cargarAjustesSupabase() {
+    try {
+        const filas = await supabaseFetch('ajustes?select=clave,valor') || [];
+        return Object.fromEntries(filas.map(f => [f.clave, f.valor]));
+    } catch (err) {
+        console.warn('No se pudieron cargar los ajustes (¿falta la tabla "ajustes"?)', err);
+        return {};
+    }
 }
 
 /* ==========================================================================
    Realtime: mantiene sincronizadas varias pestañas/dispositivos a la vez
    (ver ARQUITECTURA-PLANTILLA.md §4.3-4.4: debounce 300ms, un canal, varias tablas)
    ========================================================================== */
-const REALTIME_TABLAS = ['despensa', 'ubicaciones', 'menu_semanal', 'lista_compra'];
+const REALTIME_TABLAS = ['despensa', 'ubicaciones', 'menu_semanal', 'lista_compra', 'ajustes'];
 let supabaseRealtimeTimers = {};
 
 function initSupabaseRealtime() {
@@ -165,6 +178,11 @@ async function refreshSupabaseTable(tabla) {
             case 'lista_compra':
                 state.listaCompra = await supabaseFetch('lista_compra?order=id.asc') || [];
                 renderListaCompra();
+                break;
+            case 'ajustes':
+                state.ajustes = await cargarAjustesSupabase();
+                renderAjustesConfig();
+                renderMenuSemanal(); // recalcula las alertas (el tupper cambia los avisos)
                 break;
         }
     } catch (err) {
@@ -270,6 +288,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                     tiempo_preparacion_min: data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null,
                     comensales_base: Number(data.comensales_base) || 1,
                     requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
+                    tipo_precocinado: data.tipo_precocinado || null,
                     instrucciones: data.instrucciones || '',
                     activa: true
                 });
@@ -291,6 +310,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 if (data.tiempo_preparacion_min !== undefined) payload.tiempo_preparacion_min = data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null;
                 if (data.comensales_base !== undefined) payload.comensales_base = Number(data.comensales_base) || 1;
                 if (data.requiere_cocinado !== undefined) payload.requiere_cocinado = !!data.requiere_cocinado;
+                if (data.tipo_precocinado !== undefined) payload.tipo_precocinado = data.tipo_precocinado || null;
 
                 const [row] = await supabaseWrite(`recetas?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Receta no encontrada' };
@@ -366,6 +386,17 @@ async function handleSupabaseWriteAction(action, method, data) {
                 await supabaseFetch(`lista_compra?id=eq.${data.id}`, { method: 'DELETE' });
                 state.listaCompra = state.listaCompra.filter(item => item.id != data.id);
                 return { success: true, message: 'Producto quitado de la lista' };
+            }
+
+            case 'ajuste': {
+                // Upsert por clave: la tabla tiene una fila por ajuste.
+                await supabaseFetch('ajustes?on_conflict=clave', {
+                    method: 'POST',
+                    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+                    body: JSON.stringify({ clave: data.clave, valor: data.valor })
+                });
+                state.ajustes = { ...state.ajustes, [data.clave]: data.valor };
+                return { success: true, message: 'Ajuste guardado' };
             }
         }
         return { success: false, error: 'Acción no contemplada' };

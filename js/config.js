@@ -258,6 +258,25 @@ function populateSupermercadoSelectors() {
 }
 
 /* ==========================================================================
+   Ajustes compartidos (state.ajustes): por ahora, "Me llevo tupper al trabajo".
+   ========================================================================== */
+function renderAjustesConfig() {
+    DOM.inAjusteLlevoTupper.checked = llevoTupper();
+}
+
+async function handleLlevoTupperChange() {
+    const valor = DOM.inAjusteLlevoTupper.checked;
+    const result = await apiRequest('ajuste', 'POST', { clave: 'llevo_tupper', valor });
+    if (result && result.success) {
+        showToast(valor ? 'Avisos de tupper activados' : 'Avisos de tupper desactivados: esos platos se cocinan el mismo día', 'success');
+        renderMenuSemanal(); // recalcula la campana y Próximas alertas
+    } else {
+        DOM.inAjusteLlevoTupper.checked = !valor;
+        showToast(result?.error || 'No se pudo guardar el ajuste (¿falta la tabla "ajustes" en Supabase?)', 'error');
+    }
+}
+
+/* ==========================================================================
    Catálogo de ubicaciones de la despensa (Despensa/Nevera/Congelador + las que
    el usuario añada, p. ej. "Trastero"). Ver DOCUMENTACIÓN-TECNICA.md §3.
    ========================================================================== */

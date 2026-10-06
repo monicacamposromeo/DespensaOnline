@@ -36,6 +36,8 @@ body:not(.dark-mode) {
     --danger-light: #f6ded9;
     --warning: #a97427;
     --warning-light: #f6ead2;
+    --origen-menu: #3a6a9e;          /* azul: etiqueta "Menú" de la lista de la compra */
+    --origen-menu-light: #e1ebf5;
 
     --card-shadow: 0 10px 26px -14px rgba(33, 38, 29, 0.28);
     --bar-shadow: 0 -2px 16px rgba(33, 38, 29, 0.08);
@@ -64,6 +66,8 @@ body.dark-mode {
     --danger-light: rgba(224, 139, 119, 0.14);
     --warning: #dba25c;
     --warning-light: rgba(219, 162, 92, 0.14);
+    --origen-menu: #8db4e2;
+    --origen-menu-light: rgba(141, 180, 226, 0.15);
 
     --card-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.55);
     --bar-shadow: 0 -2px 20px rgba(0, 0, 0, 0.4);
@@ -308,6 +312,22 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .alert-strip.alert-warn { background: var(--warning-light); border-left-color: var(--warning); color: var(--text-primary); }
 .alert-strip.alert-info { background: var(--primary-light); border-left-color: var(--primary); color: var(--text-primary); }
 .alerta-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+/* Modal "¿Qué sacas del congelador?" (js/descongelar.js): una fila por paquete congelado
+   con su casilla, y la cantidad que sale (por si solo se saca una parte). */
+.descongelar-producto { margin-bottom: 14px; }
+.descongelar-lote {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 12px; margin-bottom: 6px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid var(--border-color);
+}
+.descongelar-lote input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); flex: 0 0 auto; }
+.descongelar-saco { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-secondary); margin-left: auto; }
+.descongelar-saco .form-input { width: 6.5em; padding: 6px 8px; }
+.descongelar-total { font-size: 0.85rem; font-weight: 600; margin: 4px 2px 0; color: var(--text-secondary); }
+.descongelar-total.ok { color: var(--success); }
+.descongelar-total.falta { color: var(--danger); }
+.descongelar-aviso { color: var(--warning); }
 /* "Antes compra: …" / "Antes descongela: …" dentro de una tarjeta de precocinado / cocinar:
    bloque propio con borde y color de peligro para que no pase desapercibido. */
 .alerta-antes {
@@ -457,7 +477,6 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 /* ==========================================================================
    Lista de la compra
    ========================================================================== */
-.compra-section { margin-bottom: 6px; }
 .compra-list { display: flex; flex-direction: column; gap: 8px; }
 .compra-item {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -465,6 +484,21 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 }
 .compra-item.comprado { opacity: 0.5; }
 .compra-item.comprado .item-name { text-decoration: line-through; }
+/* Origen de cada fila de la lista de la compra (una sola lista, sin secciones): borde
+   izquierdo de color + etiqueta. Menú = azul (propio, para no confundirse con el verde
+   de los supermercados), Reposición = ámbar, A mano = gris. */
+.compra-item.origen-menu { border-left: 4px solid var(--origen-menu); }
+.compra-item.origen-minimo { border-left: 4px solid var(--warning); }
+.compra-item.origen-manual { border-left: 4px solid var(--text-muted); }
+.tag-origen {
+    display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+}
+.tag-origen.origen-menu { background: var(--origen-menu-light); color: var(--origen-menu); }
+.tag-origen.origen-minimo { background: var(--warning-light); color: var(--warning); }
+.tag-origen.origen-manual { background: var(--bg-sunken); color: var(--text-secondary); }
+.compra-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.compra-leyenda-texto { font-size: 0.8rem; color: var(--text-muted); flex-basis: 100%; }
+.compra-info-origen { margin: 0 0 6px; }
 .tag-supermercado {
     display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px;
     background: var(--primary-light); color: var(--primary);

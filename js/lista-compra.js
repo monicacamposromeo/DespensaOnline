@@ -175,37 +175,40 @@ function renderCompraChipsSupermercado() {
 function renderListaCompra() {
     renderCompraChipsSupermercado();
     const filtrando = state.compraFiltro.supermercado !== 'todos';
-    const visibles = state.listaCompra.filter(pasaFiltroSupermercado);
-    const menuItems = visibles.filter(li => li.origen === 'menu').sort(compararItemsCompra);
-    const minimoItems = visibles.filter(li => li.origen === 'minimo').sort(compararItemsCompra);
-    const manualItems = visibles.filter(li => li.origen === 'manual').sort(compararItemsCompra);
-    const vacioFiltrado = '<p class="empty-state-inline">Nada de este supermercado en esta sección.</p>';
+    // Una única lista, sin separar por origen: ordenada por categoría y nombre
+    // (compararItemsCompra()), y cada fila indica de dónde viene (color + etiqueta).
+    const items = state.listaCompra.filter(pasaFiltroSupermercado).sort(compararItemsCompra);
 
     DOM.compraEmpty.classList.toggle('hidden', state.listaCompra.length > 0);
-    DOM.compraListMenu.innerHTML = menuItems.length > 0
-        ? menuItems.map(compraItemHtml).join('')
-        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Genera la lista desde el menú semanal.</p>';
-    DOM.compraListMinimo.innerHTML = minimoItems.length > 0
-        ? minimoItems.map(compraItemHtml).join('')
-        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Ningún producto con stock mínimo está por debajo de lo configurado.</p>';
-    DOM.compraListManual.innerHTML = manualItems.length > 0
-        ? manualItems.map(compraItemHtml).join('')
-        : filtrando ? vacioFiltrado : '<p class="empty-state-inline">Sin productos añadidos a mano.</p>';
+    DOM.compraList.innerHTML = items.length > 0
+        ? items.map(compraItemHtml).join('')
+        : filtrando && state.listaCompra.length > 0
+            ? '<p class="empty-state-inline">Nada de este supermercado en la lista.</p>'
+            : '';
 
-    [DOM.compraListMenu, DOM.compraListMinimo, DOM.compraListManual].forEach(container => {
-        container.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
-            cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
-        });
-        container.querySelectorAll('[data-compra-delete]').forEach(btn => {
-            btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
-        });
-        container.querySelectorAll('[data-compra-info]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const item = state.listaCompra.find(li => String(li.id) === btn.dataset.compraInfo);
-                if (item) openCompraInfoModal(item);
-            });
+    DOM.compraList.querySelectorAll('[data-compra-checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
+    });
+    DOM.compraList.querySelectorAll('[data-compra-delete]').forEach(btn => {
+        btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
+    });
+    DOM.compraList.querySelectorAll('[data-compra-info]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = state.listaCompra.find(li => String(li.id) === btn.dataset.compraInfo);
+            if (item) openCompraInfoModal(item);
         });
     });
+}
+
+// Etiqueta y clase de color de cada origen de una fila de la lista de la compra.
+const ORIGEN_COMPRA = {
+    menu: { etiqueta: 'Menú', clase: 'origen-menu' },
+    minimo: { etiqueta: 'Reposición', clase: 'origen-minimo' },
+    manual: { etiqueta: 'A mano', clase: 'origen-manual' }
+};
+
+function getOrigenCompra(item) {
+    return ORIGEN_COMPRA[item.origen] || ORIGEN_COMPRA.manual;
 }
 
 // Para las filas de "Reposición automática" (origen='minimo'): cuál es el mínimo
@@ -221,7 +224,8 @@ function compraMinimoMetaHtml(productoId, producto) {
 // categoría), su supermercado como etiqueta y, en "Reposición automática", el mínimo y
 // lo que tienes.
 function compraItemMetaHtml(item, producto) {
-    const partes = [];
+    const origen = getOrigenCompra(item);
+    const partes = [`<span class="tag-origen ${origen.clase}">${origen.etiqueta}</span>`];
     if (producto.supermercado) partes.push(`<span class="tag-supermercado">${escapeHtml(producto.supermercado)}</span>`);
     if (producto.categoria) partes.push(escapeHtml(producto.categoria));
     if (item.origen === 'minimo') partes.push(compraMinimoMetaHtml(item.productoId, producto));
@@ -231,32 +235,30 @@ function compraItemMetaHtml(item, producto) {
 function compraItemHtml(item) {
     const producto = getProducto(item.productoId);
     if (!producto) return '';
-    const checkboxId = `compra-cb-${item.id}`;
-    // Del menú: el nombre/cantidad abre el desglose por receta (botón). A mano: no hay
-    // receta que mostrar, así que el nombre/cantidad sigue marcando comprado como antes
-    // (una <label> más, apuntando al mismo checkbox).
-    const infoTag = item.origen === 'menu' ? 'button' : 'label';
-    const infoAttrs = item.origen === 'menu' ? `type="button" data-compra-info="${item.id}"` : `for="${checkboxId}"`;
+    // Solo el checkbox marca como comprado. El resto de la fila (botón) abre siempre la
+    // ventana que explica de dónde viene el producto (openCompraInfoModal()), sea cual sea
+    // su origen. El borde izquierdo de color y la etiqueta dicen el origen de un vistazo.
     const nombreHtml = `<span class="item-main"><span class="item-name">${escapeHtml(producto.nombre)}</span>${compraItemMetaHtml(item, producto)}</span>`;
     return `
-        <div class="compra-item ${item.comprado ? 'comprado' : ''}">
-            <label class="compra-item-checkbox">
-                <input type="checkbox" id="${checkboxId}" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''}>
+        <div class="compra-item ${getOrigenCompra(item).clase} ${item.comprado ? 'comprado' : ''}">
+            <label class="compra-item-checkbox" title="Marcar como comprado">
+                <input type="checkbox" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''} aria-label="Comprado">
             </label>
-            <${infoTag} class="compra-item-info" ${infoAttrs}>
+            <button type="button" class="compra-item-info" data-compra-info="${item.id}">
                 <span class="mono mono-sm">${escapeHtml(monogramLetter(producto.nombre))}</span>
                 ${nombreHtml}
                 ${compraUrgenciaHtml(item)}
                 <span class="compra-item-cantidad">${formatCantidad(item.cantidad, producto.unidad)}</span>
-            </${infoTag}>
+            </button>
             <button type="button" class="row-delete" data-compra-delete="${item.id}" title="Quitar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `;
 }
 
 /* ==========================================================================
-   Modal: en qué recetas del menú se necesita un producto (solo para filas
-   origen='menu' — las de "a mano" no vienen de ninguna receta).
+   Modal: de dónde viene un producto de la lista (se abre al tocar cualquier
+   fila). Del menú: en qué recetas se necesita y cuánto. Reposición: mínimo y
+   lo que tienes. A mano: cuándo se añadió.
    ========================================================================== */
 function compraInfoRowHtml(uso, unidad) {
     return `
@@ -264,7 +266,7 @@ function compraInfoRowHtml(uso, unidad) {
             <span class="mono mono-qty" title="${escapeHtml(formatCantidad(uso.cantidadNecesaria, unidad))}">${escapeHtml(formatCantidadCompacta(uso.cantidadNecesaria, unidad))}</span>
             <span class="item-main">
                 <span class="item-name">${escapeHtml(uso.receta.nombre)}</span>
-                <span class="item-meta">${TIPO_COMIDA_LABELS[uso.entrada.tipo_comida] || uso.entrada.tipo_comida} · ${formatDate(uso.entrada.fecha)}</span>
+                <span class="item-meta">${TIPO_COMIDA_LABELS[uso.entrada.tipo_comida] || uso.entrada.tipo_comida} · ${nombreDiaSemana(uso.entrada.fecha).toLowerCase()} ${formatDate(uso.entrada.fecha)}</span>
             </span>
         </div>
     `;
@@ -275,17 +277,34 @@ function openCompraInfoModal(item) {
     if (!producto) return;
 
     DOM.modalCompraInfoTitle.textContent = producto.nombre;
+    const origen = getOrigenCompra(item);
+    DOM.compraInfoOrigen.className = `tag-origen ${origen.clase}`;
+    DOM.compraInfoOrigen.textContent = origen.etiqueta;
+    const unidad = producto.unidad;
+    const disponible = getStockDisponible(item.productoId);
+    DOM.compraInfoList.innerHTML = '';
 
-    const usos = getUsosDeProductoEnMenu(item.productoId);
-    if (usos.length === 0) {
-        DOM.compraInfoResumen.textContent = 'Ya no aparece en el menú actual (puede que el menú haya cambiado desde que se generó la lista).';
-        DOM.compraInfoList.innerHTML = '';
-    } else {
-        const necesario = round2(usos.reduce((sum, u) => sum + u.cantidadNecesaria, 0));
-        const disponible = getStockDisponible(item.productoId);
+    if (item.origen === 'menu') {
+        // Desglose por receta del menú (recalculado contra el menú actual).
+        const usos = getUsosDeProductoEnMenu(item.productoId);
+        if (usos.length === 0) {
+            DOM.compraInfoResumen.textContent = 'Viene del menú, pero ya no aparece en el menú actual (puede que el menú haya cambiado desde que se generó la lista).';
+        } else {
+            const necesario = round2(usos.reduce((sum, u) => sum + u.cantidadNecesaria, 0));
+            DOM.compraInfoResumen.textContent =
+                `Viene del menú. Necesario en total: ${formatCantidad(necesario, unidad)} · Ya tienes: ${formatCantidad(disponible, unidad)} · A comprar: ${formatCantidad(item.cantidad, unidad)}`;
+            DOM.compraInfoList.innerHTML = usos.map(u => compraInfoRowHtml(u, unidad)).join('');
+        }
+    } else if (item.origen === 'minimo') {
+        const minimo = parseFloat(producto.stock_minimo) || 0;
         DOM.compraInfoResumen.textContent =
-            `Necesario en total: ${formatCantidad(necesario, producto.unidad)} · Ya tienes: ${formatCantidad(disponible, producto.unidad)} · A comprar: ${formatCantidad(item.cantidad, producto.unidad)}`;
-        DOM.compraInfoList.innerHTML = usos.map(u => compraInfoRowHtml(u, producto.unidad)).join('');
+            `Reposición automática: tienes ${formatCantidad(disponible, unidad)} y tu mínimo es ${formatCantidad(minimo, unidad)}, así que faltan ${formatCantidad(item.cantidad, unidad)}. ` +
+            'Se actualiza sola al cambiar la despensa; el mínimo se cambia en Ajustes → Catálogo de productos.';
+    } else {
+        const fecha = (item.fecha_creacion || '').slice(0, 10);
+        DOM.compraInfoResumen.textContent = fecha
+            ? `Lo añadiste a mano el ${nombreDiaSemana(fecha).toLowerCase()} ${formatDate(fecha)}.`
+            : 'Lo añadiste a mano.';
     }
 
     DOM.modalCompraInfo.classList.remove('hidden');

@@ -61,10 +61,13 @@ function recetaCardHtml(receta) {
         .filter(Boolean)
         .join(', ');
 
+    const tipoPrecocinado = getTipoPrecocinado(receta);
     const meta = [
         receta.tiempo_preparacion_min ? `${receta.tiempo_preparacion_min} min` : null,
         `${receta.comensales_base} comensales`,
-        recetaRequierePrecocinado(receta) ? null : 'Listo para servir'
+        tipoPrecocinado === 'fin_de_semana' ? 'Precocinar el finde'
+            : tipoPrecocinado === 'dia_anterior' ? 'Tupper: la víspera'
+            : recetaRequierePrecocinado(receta) ? null : 'Listo para servir'
     ].filter(Boolean).join(' · ');
 
     return `
@@ -87,7 +90,7 @@ function openRecetaModal(receta = null) {
     DOM.inRecetaCategoria.value = receta ? receta.categoria : 'comida';
     DOM.inRecetaTiempo.value = receta ? (receta.tiempo_preparacion_min || '') : '';
     DOM.inRecetaComensales.value = receta ? receta.comensales_base : 2;
-    DOM.inRecetaRequiereCocinado.checked = receta ? receta.requiere_cocinado !== false : true;
+    DOM.inRecetaTipoPrecocinado.value = receta ? (getTipoPrecocinado(receta) || '') : 'fin_de_semana';
     DOM.inRecetaInstrucciones.value = receta ? (receta.instrucciones || '') : '';
     DOM.btnDeleteReceta.classList.toggle('hidden', !receta);
     DOM.btnDuplicateReceta.classList.toggle('hidden', !receta);
@@ -200,7 +203,10 @@ async function handleRecetaFormSubmit(e) {
         categoria: DOM.inRecetaCategoria.value,
         tiempo_preparacion_min: DOM.inRecetaTiempo.value || null,
         comensales_base: DOM.inRecetaComensales.value,
-        requiere_cocinado: DOM.inRecetaRequiereCocinado.checked,
+        // El desplegable guarda dos columnas: requiere_cocinado (sí/no, como antes) y
+        // tipo_precocinado ('fin_de_semana' | 'dia_anterior', null si no lleva).
+        requiere_cocinado: DOM.inRecetaTipoPrecocinado.value !== '',
+        tipo_precocinado: DOM.inRecetaTipoPrecocinado.value || null,
         instrucciones: DOM.inRecetaInstrucciones.value,
         ingredientes
     };
@@ -252,6 +258,7 @@ async function handleDuplicateReceta() {
         tiempo_preparacion_min: receta.tiempo_preparacion_min || null,
         comensales_base: receta.comensales_base,
         requiere_cocinado: receta.requiere_cocinado !== false,
+        tipo_precocinado: getTipoPrecocinado(receta),
         instrucciones: receta.instrucciones || '',
         ingredientes
     });

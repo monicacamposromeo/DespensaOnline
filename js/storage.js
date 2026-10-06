@@ -38,6 +38,7 @@ function renderAllScreens() {
     renderListaCompra();
     renderProductosConfig();
     renderUbicacionesConfig();
+    renderAjustesConfig();
 }
 
 /* ==========================================================================
@@ -67,6 +68,7 @@ function handleLocalFileSelected(file) {
                 state.recetaIngredientes = data.recetaIngredientes || [];
                 state.menuSemanal = data.menuSemanal || [];
                 state.listaCompra = data.listaCompra || [];
+                state.ajustes = data.ajustes || {};
                 saveLocalCache();
                 showAppInterface();
                 updateLocalModeUI();
@@ -92,6 +94,7 @@ function loadDefaultLocalStructure() {
     state.recetaIngredientes = [];
     state.menuSemanal = [];
     state.listaCompra = [];
+    state.ajustes = {};
 }
 
 function createNewLocalDB() {
@@ -117,7 +120,8 @@ function saveLocalCache() {
         recetas: state.recetas,
         recetaIngredientes: state.recetaIngredientes,
         menuSemanal: state.menuSemanal,
-        listaCompra: state.listaCompra
+        listaCompra: state.listaCompra,
+        ajustes: state.ajustes
     }));
 }
 
@@ -172,7 +176,8 @@ function downloadLocalDB() {
         recetas: state.recetas,
         recetaIngredientes: state.recetaIngredientes,
         menuSemanal: state.menuSemanal,
-        listaCompra: state.listaCompra
+        listaCompra: state.listaCompra,
+        ajustes: state.ajustes
     };
     const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -210,6 +215,7 @@ function checkLocalCache() {
                     state.recetaIngredientes = data.recetaIngredientes || [];
                     state.menuSemanal = data.menuSemanal || [];
                     state.listaCompra = data.listaCompra || [];
+                    state.ajustes = data.ajustes || {};
 
                     showAppInterface();
                     updateLocalModeUI();
@@ -261,8 +267,8 @@ function loadDemoData() {
     ];
 
     state.recetas = [
-        { id: 1, nombre: 'Tortilla de patatas', categoria: 'comida', tiempo_preparacion_min: 30, comensales_base: 2, requiere_cocinado: true, instrucciones: 'Freír, batir los huevos con la cebolla pochada y cuajar en la sartén.', activa: true },
-        { id: 2, nombre: 'Arroz con pollo', categoria: 'comida', tiempo_preparacion_min: 40, comensales_base: 4, requiere_cocinado: true, instrucciones: 'Sofreír el pollo y la verdura, añadir el arroz y el caldo, cocer.', activa: true },
+        { id: 1, nombre: 'Tortilla de patatas', categoria: 'comida', tiempo_preparacion_min: 30, comensales_base: 2, requiere_cocinado: true, tipo_precocinado: 'dia_anterior', instrucciones: 'Freír, batir los huevos con la cebolla pochada y cuajar en la sartén.', activa: true },
+        { id: 2, nombre: 'Arroz con pollo', categoria: 'comida', tiempo_preparacion_min: 40, comensales_base: 4, requiere_cocinado: true, tipo_precocinado: 'fin_de_semana', instrucciones: 'Sofreír el pollo y la verdura, añadir el arroz y el caldo, cocer.', activa: true },
         // Receta "de montar": no lleva la marca general (no es un guiso conjunto), solo
         // la pasta necesita cocinarse — el tomate frito y el queso rallado ya están listos.
         { id: 3, nombre: 'Pasta con tomate y queso', categoria: 'cena', tiempo_preparacion_min: 20, comensales_base: 2, requiere_cocinado: false, instrucciones: 'Cocer la pasta, mezclar con el tomate frito y espolvorear el queso.', activa: true }
@@ -291,6 +297,8 @@ function loadDemoData() {
     state.listaCompra = [
         { id: 1, productoId: 9, cantidad: 100, comprado: false, origen: 'manual', fecha_creacion: new Date().toISOString() }
     ];
+
+    state.ajustes = {};
 
     renderAllScreens();
 }
@@ -391,6 +399,7 @@ function applyWriteAction(action, data, persist) {
                 tiempo_preparacion_min: data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null,
                 comensales_base: Number(data.comensales_base) || 1,
                 requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
+                tipo_precocinado: data.tipo_precocinado || null,
                 instrucciones: data.instrucciones || '',
                 activa: true
             });
@@ -412,6 +421,7 @@ function applyWriteAction(action, data, persist) {
             if (data.tiempo_preparacion_min !== undefined) r.tiempo_preparacion_min = data.tiempo_preparacion_min ? Number(data.tiempo_preparacion_min) : null;
             if (data.comensales_base !== undefined) r.comensales_base = Number(data.comensales_base) || 1;
             if (data.requiere_cocinado !== undefined) r.requiere_cocinado = !!data.requiere_cocinado;
+            if (data.tipo_precocinado !== undefined) r.tipo_precocinado = data.tipo_precocinado || null;
             if (data.instrucciones !== undefined) r.instrucciones = data.instrucciones;
             if (data.ingredientes !== undefined) {
                 // Sustitución completa de ingredientes (más simple que un diff fino para una app básica)
@@ -475,6 +485,12 @@ function applyWriteAction(action, data, persist) {
             state.listaCompra = state.listaCompra.filter(item => item.id != data.id);
             commit();
             return { success: true, message: 'Producto quitado de la lista' };
+        }
+
+        case 'ajuste': {
+            state.ajustes = { ...state.ajustes, [data.clave]: data.valor };
+            commit();
+            return { success: true, message: 'Ajuste guardado' };
         }
     }
 

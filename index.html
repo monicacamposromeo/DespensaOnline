@@ -177,19 +177,13 @@
 
                     <div class="chips hidden" id="compra-chips-supermercado"></div>
 
-                    <div class="compra-section">
-                        <h2 class="section-title">Del menú</h2>
-                        <div id="compra-list-menu" class="compra-list"></div>
-                    </div>
-                    <div class="compra-section">
-                        <h2 class="section-title">Reposición automática</h2>
-                        <p class="config-hint">Productos con un stock mínimo configurado (Configuración → Catálogo de productos) que han bajado de ese mínimo. Se actualiza solo, sin depender del menú.</p>
-                        <div id="compra-list-minimo" class="compra-list"></div>
-                    </div>
-                    <div class="compra-section">
-                        <h2 class="section-title">Añadido a mano</h2>
-                        <div id="compra-list-manual" class="compra-list"></div>
-                    </div>
+                    <p class="compra-leyenda">
+                        <span class="tag-origen origen-menu">Menú</span>
+                        <span class="tag-origen origen-minimo">Reposición</span>
+                        <span class="tag-origen origen-manual">A mano</span>
+                        <span class="compra-leyenda-texto">Toca un producto para ver de dónde viene; el cuadro de la izquierda lo marca como comprado.</span>
+                    </p>
+                    <div id="compra-list" class="compra-list"></div>
 
                     <p class="empty-state hidden" id="compra-empty">La lista de la compra está vacía.</p>
                     <button class="text-btn" id="btn-limpiar-comprados">Quitar comprados</button>
@@ -222,6 +216,15 @@
                                 <button class="btn btn-secondary" id="btn-config-supabase-connect">Conectar / cambiar credenciales</button>
                                 <button class="btn btn-danger hidden" id="btn-config-supabase-disconnect">Desconectar</button>
                             </div>
+                        </div>
+
+                        <div class="card config-card">
+                            <h3>Tupper</h3>
+                            <label class="checkbox-field">
+                                <input type="checkbox" id="in-ajuste-llevo-tupper">
+                                Me llevo tupper al trabajo
+                            </label>
+                            <p class="config-hint">Desmárcalo en las temporadas en que comes en casa: las recetas de "Día anterior (tupper)" dejarán de avisarte la víspera y se tratarán como un plato que cocinas al momento ("Hoy toca cocinar" ese día). Se aplica en todos tus dispositivos.</p>
                         </div>
 
                         <div class="card config-card">
@@ -417,11 +420,13 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="checkbox-field">
-                        <input type="checkbox" id="in-receta-requiere-cocinado" checked>
-                        Requiere precocinado (el plato completo)
-                    </label>
-                    <p class="config-hint">Márcalo si toda la receta se prepara como un guiso o plato conjunto que hay que cocinar (lentejas, arroz con pollo...). Desmárcalo si es una receta de montar donde, como mucho, algún ingrediente concreto necesita precocinado por separado — en ese caso, márcalo en ese ingrediente más abajo, aunque esta casilla esté desmarcada.</p>
+                    <label for="in-receta-tipo-precocinado">Precocinado del plato completo</label>
+                    <select id="in-receta-tipo-precocinado" class="form-select">
+                        <option value="">No</option>
+                        <option value="fin_de_semana" selected>Fin de semana anterior (guisos, potajes…)</option>
+                        <option value="dia_anterior">Día anterior (tupper para el trabajo)</option>
+                    </select>
+                    <p class="config-hint"><strong>Fin de semana anterior</strong>: platos largos que dejas hechos el finde (lentejas, cocido…); te avisa desde el sábado anterior. <strong>Día anterior</strong>: platos que preparas la víspera para llevarte en tupper; te avisa la víspera (y, si algo está congelado, dos días antes para descongelarlo). <strong>No</strong>: recetas de montar; si algún ingrediente concreto necesita cocinarse aparte, márcalo en ese ingrediente más abajo y te lo recordará el mismo día.</p>
                 </div>
                 <div class="form-group">
                     <label for="in-receta-instrucciones">Instrucciones (opcional)</label>
@@ -472,7 +477,7 @@
                         <input type="checkbox" id="in-menu-entry-precocinado">
                         Ya lo he precocinado
                     </label>
-                    <p class="config-hint">Si es un plato completo (un guiso), mientras no lo marques las alertas te recordarán precocinarlo (y descongelar lo necesario) cada día desde el sábado anterior. Si solo es un ingrediente, se te recuerda el mismo día.</p>
+                    <p class="config-hint">Mientras no lo marques, las alertas te lo recordarán (y lo que haya que comprar o descongelar): un guiso de fin de semana, cada día desde el sábado anterior; un tupper, la víspera; un ingrediente suelto, el mismo día.</p>
                 </div>
                 <div class="form-group hidden" id="menu-entry-descongelados-field">
                     <label>Ingredientes congelados</label>
@@ -501,6 +506,24 @@
         </div>
     </div>
 
+    <!-- Modal: "Ya descongelado" — qué paquetes salen del congelador (js/descongelar.js) -->
+    <div class="modal-backdrop hidden" id="modal-descongelar">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2>¿Qué sacas del congelador?</h2>
+                <button class="modal-close" id="btn-close-modal-descongelar" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <p id="descongelar-resumen" class="config-hint"></p>
+            <p id="descongelar-aviso-nevera" class="config-hint descongelar-aviso hidden">No tienes ninguna ubicación llamada "Nevera" (o "Frigo…"): se marcará como descongelado, pero tendrás que mover los paquetes a mano.</p>
+            <div id="descongelar-list"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="btn-cancel-descongelar">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-descongelar">Pasar a la Nevera</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: en qué recetas se necesita un producto de la lista de la compra -->
     <div class="modal-backdrop hidden" id="modal-compra-info">
         <div class="modal">
@@ -509,6 +532,7 @@
                 <h2 id="modal-compra-info-title">Producto</h2>
                 <button class="modal-close" id="btn-close-modal-compra-info" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
             </div>
+            <p class="compra-info-origen"><span id="compra-info-origen" class="tag-origen"></span></p>
             <p id="compra-info-resumen" class="config-hint"></p>
             <div id="compra-info-list" class="lotes-list-modal"></div>
         </div>
@@ -555,6 +579,7 @@
     <script src="./js/menu.js"></script>
     <script src="./js/lista-compra.js"></script>
     <script src="./js/alertas.js"></script>
+    <script src="./js/descongelar.js"></script>
     <script src="./js/config.js"></script>
     <script src="./js/event-handler.js"></script>
     <script src="./app.js"></script>

@@ -102,6 +102,7 @@ function initConfigActions() {
     DOM.formNuevoProducto.addEventListener('submit', handleNuevoProductoSubmit);
     DOM.btnCancelEditProducto.addEventListener('click', cancelarEdicionProducto);
     DOM.formNuevaUbicacion.addEventListener('submit', handleNuevaUbicacionSubmit);
+    DOM.inAjusteLlevoTupper.addEventListener('change', handleLlevoTupperChange);
     wireCategoriaSelect(DOM.inProductoCategoria, DOM.inProductoCategoriaNueva);
     wireSelectConNuevo(DOM.inProductoSupermercado, DOM.inProductoSupermercadoNuevo, SUPERMERCADO_NUEVO_VALUE);
     DOM.productosSearch.addEventListener('input', (e) => { state.productosFiltro.search = e.target.value; renderProductosConfig(); });

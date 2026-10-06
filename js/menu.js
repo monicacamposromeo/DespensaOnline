@@ -216,7 +216,7 @@ async function handleMenuEntryFormSubmit(e) {
         else if (entrada && entrada.precocinado) payload.precocinado = false;
 
         // Descongelados: lo que quede marcado en las casillas (se puede desmarcar). Los recién
-        // marcados, además, pasan sus lotes a la Nevera tras guardar (marcarDescongelado()).
+        // marcados, además, abren tras guardar la ventana de paquetes (abrirModalDescongelar()).
         const mismaReceta = entrada && String(entrada.recetaId) === String(payload.recetaId);
         const antes = entrada && mismaReceta ? getDescongeladosEntrada(entrada) : [];
         const marcados = [...DOM.menuEntryDescongeladosList.querySelectorAll('[data-descongelado-check]:checked')].map(cb => cb.value);
@@ -231,12 +231,10 @@ async function handleMenuEntryFormSubmit(e) {
 
     if (result && result.success) {
         closeMenuEntryModal();
-        if (nuevosDescongelados.length > 0) {
-            await marcarDescongelado(entradaId, nuevosDescongelados, { yaGuardado: true }); // su propio toast y repintado
-        } else {
-            showToast(result.message, 'success');
-            renderMenuSemanal();
-        }
+        showToast(result.message, 'success');
+        renderMenuSemanal();
+        // Los recién marcados ya están guardados; falta elegir qué paquetes salen del congelador.
+        if (nuevosDescongelados.length > 0) abrirModalDescongelar(entradaId, nuevosDescongelados, { yaGuardado: true });
     } else {
         showToast(result?.error || 'Error al guardar', 'error');
     }

@@ -26,12 +26,28 @@ function sabadoAnteriorA(fechaISO) {
     return formatISODate(d);
 }
 
-// Dos tipos de precocinado (§3): el de la receta completa (recetas.requiere_cocinado, un
-// guiso) se prepara con días de antelación, el fin de semana anterior; el de un ingrediente
-// concreto (receta_ingredientes.requiere_cocinado, p. ej. el arroz de unas fajitas) se hace
-// el mismo día, lo primero. Solo el primero adelanta también el descongelado.
+// Tipos de precocinado (§3). Del plato completo (recetas.requiere_cocinado, con su
+// recetas.tipo_precocinado, ver getTipoPrecocinado() en js/state.js):
+//  - 'fin_de_semana': guisos y potajes que se dejan hechos el fin de semana anterior.
+//  - 'dia_anterior': platos que se preparan la víspera para llevarlos en tupper al trabajo.
+// Y el de un ingrediente concreto (receta_ingredientes.requiere_cocinado, p. ej. el arroz
+// de unas fajitas), que se hace el mismo día, lo primero. Solo los del plato completo tienen
+// tarjeta de precocinado con antelación y adelantan el descongelado. Se usa el tipo
+// EFECTIVO (getTipoPrecocinadoEfectivo(), js/state.js): con el ajuste "Me llevo tupper"
+// desactivado, un tupper es 'mismo_dia' y se trata como un plato que se cocina al momento
+// (sin tarjeta la víspera; "Hoy toca cocinar" ese día; lo congelado, la víspera).
 function esPrecocinadoDeRecetaCompleta(receta) {
-    return !!receta && receta.requiere_cocinado !== false;
+    const tipo = getTipoPrecocinadoEfectivo(receta);
+    return tipo === 'fin_de_semana' || tipo === 'dia_anterior';
+}
+
+function esTupper(receta) {
+    return getTipoPrecocinadoEfectivo(receta) === 'dia_anterior';
+}
+
+// Primer día en que avisa la tarjeta de precocinado de un plato del menú.
+function inicioAvisoPrecocinado(receta, fecha) {
+    return esTupper(receta) ? addDaysToISO(fecha, -1) : sabadoAnteriorA(fecha);
 }
 
 // "200 g Pasta", "1 ud Pechuga"... de los ingredientes marcados para precocinar en una
@@ -70,30 +86,71 @@ function getDescongeladosEntrada(entrada) {
     return Array.isArray(entrada.descongelados) ? entrada.descongelados.map(String) : [];
 }
 
-// Productos de una receta que tienes en el congelador y hay que descongelar antes de usarlos
-// para ESA entrada del menú: sin repetir (aunque el producto esté dos veces en la receta),
-// opcionalmente solo los ingredientes que cumplan `filtroIngrediente`, y sin los que ya se
-// marcaron "Ya descongelado" en la entrada.
-function getProductosADescongelar(receta, entrada, filtroIngrediente = () => true) {
+// Cantidad de un producto que pide una entrada del menú: suma de sus filas en la receta
+// (por si está repetido), escalada por comensales/comensales_base.
+function getCantidadEnEntrada(receta, entrada, productoId) {
+    const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
+    return getIngredientesReceta(receta.id)
+        .filter(ing => String(ing.productoId) === String(productoId))
+        .reduce((sum, ing) => sum + (parseFloat(ing.cantidad) || 0) * factor, 0);
+}
+
+// Stock de un producto que ya está fuera del congelador (nevera, despensa… o en el
+// congelador pero marcado "no hay que descongelar"): lo que no hace falta descongelar.
+function getStockFueraDelCongelador(productoId) {
+    const congelados = new Set(getLotesCongelados(productoId).map(l => l.id));
+    return state.despensa
+        .filter(l => l.activa && String(l.productoId) === String(productoId) && !congelados.has(l.id))
+        .reduce((sum, l) => sum + (parseFloat(l.cantidad) || 0), 0);
+}
+
+// Cuánto hay que descongelar de un producto para una entrada del menú: lo que pide la
+// receta menos lo que ya hay fuera del congelador, sin pasar de lo que hay congelado. De
+// lo que está fuera se descuenta antes lo que van a gastar los platos del menú anteriores
+// (desde `hoy` hasta la víspera de esta entrada, getNecesidadesDelDia()), para no contar
+// dos veces el mismo pollo de la nevera. 0 si no hace falta descongelar nada.
+function getCantidadADescongelar(receta, entrada, productoId, hoy = todayISO()) {
+    const necesaria = getCantidadEnEntrada(receta, entrada, productoId);
+    let consumoPrevio = 0;
+    for (let d = hoy; d < entrada.fecha; d = addDaysToISO(d, 1)) {
+        consumoPrevio += getNecesidadesDelDia(d)[productoId] || 0;
+    }
+    const fueraDisponible = Math.max(0, getStockFueraDelCongelador(productoId) - consumoPrevio);
+    const congelado = getLotesCongelados(productoId).reduce((sum, l) => sum + (parseFloat(l.cantidad) || 0), 0);
+    return round2(Math.min(congelado, Math.max(0, necesaria - fueraDisponible)));
+}
+
+// Productos de una receta que hay que descongelar antes de usarlos para ESA entrada del
+// menú: sin repetir (aunque el producto esté dos veces en la receta), sin los ya marcados
+// "Ya descongelado" en la entrada y solo si lo que ya hay fuera del congelador no basta
+// (getCantidadADescongelar()). Cada producto lleva `cantidadADescongelar` para los textos
+// de las alertas y para preseleccionar paquetes en el modal "Ya descongelado".
+function getProductosADescongelar(receta, entrada, hoy = todayISO()) {
     const yaDescongelados = getDescongeladosEntrada(entrada);
     const vistos = new Set();
     return getIngredientesReceta(receta.id)
-        .filter(filtroIngrediente)
         .map(ing => getProducto(ing.productoId))
         .filter(producto => {
             if (!producto || vistos.has(String(producto.id)) || yaDescongelados.includes(String(producto.id))) return false;
             vistos.add(String(producto.id));
-            return getLotesCongelados(producto.id).length > 0;
-        });
+            return true;
+        })
+        .map(producto => ({ ...producto, cantidadADescongelar: getCantidadADescongelar(receta, entrada, producto.id, hoy) }))
+        .filter(p => p.cantidadADescongelar > 0);
+}
+
+// "400 g Pechuga de pollo" para los textos de las alertas de descongelar.
+function textoADescongelar(producto) {
+    return `${formatCantidad(producto.cantidadADescongelar, producto.unidad)} ${producto.nombre}`;
 }
 
 // En una receta de precocinado completo, los ingredientes que siguen en el congelador sin
 // marcar "Ya descongelado": se muestran dentro de la alerta de precocinado / "Cocinar hoy"
 // de ese plato ("Antes descongela: …"), en vez de como alertas sueltas. En el resto de
 // recetas no hay nada que adelantar: su descongelado va por la sección Descongelar.
-function getPendientesDescongelarParaPrecocinar(receta, entrada) {
+function getPendientesDescongelarParaPrecocinar(receta, entrada, hoy = todayISO()) {
     if (!esPrecocinadoDeRecetaCompleta(receta) || entrada.precocinado) return [];
-    return getProductosADescongelar(receta, entrada);
+    return getProductosADescongelar(receta, entrada, hoy);
 }
 
 // En una tarjeta de "Precocina con tiempo": qué ingredientes del plato no llegan con lo que
@@ -228,14 +285,14 @@ function getAlertas(hoy = todayISO()) {
     // avisa desde la víspera de la receta y se repite cada día hasta que se marque "Ya
     // descongelado" en ese plato (botón de la alerta o casilla del modal del menú,
     // menu_semanal.descongelados, que además pasa los lotes a la Nevera — ver
-    // marcarDescongelado()) o hasta que pase el día de la receta (el propio día aún avisa).
+    // abrirModalDescongelar(), js/descongelar.js) o hasta que pase el día de la receta (el propio día aún avisa).
     state.menuSemanal
         .filter(e => e.activa && e.fecha >= hoy && hoy >= addDaysToISO(e.fecha, -1))
         .forEach(entrada => {
             const receta = getReceta(entrada.recetaId);
             if (!receta || esPrecocinadoDeRecetaCompleta(receta)) return;
             const comida = TIPO_COMIDA_LABELS[entrada.tipo_comida] || entrada.tipo_comida;
-            getProductosADescongelar(receta, entrada).forEach(producto => alertas.push({
+            getProductosADescongelar(receta, entrada, hoy).forEach(producto => alertas.push({
                 tipo: 'descongelar',
                 prioridad: 2,
                 fecha: entrada.fecha,
@@ -243,43 +300,69 @@ function getAlertas(hoy = todayISO()) {
                 entradaId: entrada.id,
                 descongelar: [producto],
                 recurrente: true,
-                titulo: `Descongela ${producto.nombre}`,
+                titulo: `Descongela ${textoADescongelar(producto)}`,
                 detalle: `Lo necesitas ${textoDia(entrada.fecha)} para ${receta.nombre} (${comida})`
             }));
         });
 
-    // Precocina con tiempo: solo para recetas futuras de precocinado COMPLETO (un guiso,
-    // esPrecocinadoDeRecetaCompleta()). Empieza el fin de semana anterior (sábado anterior a
-    // la receta, sabadoAnteriorA(); para una receta de domingo, la víspera) y se repite cada
-    // día — sábado, domingo y, si no dio tiempo, los días siguientes hasta la víspera —
-    // mientras la entrada del menú no esté marcada "Ya precocinado" (menu_semanal.precocinado,
-    // botón de la propia alerta o casilla del hueco del menú). El propio día de la receta ya lo
-    // cubre "Cocinar hoy". El precocinado de un ingrediente suelto no avisa con antelación:
-    // se recuerda solo el mismo día, en "Cocinar hoy".
+    // Descongelar para un tupper ('dia_anterior'): el plato se cocina la víspera, así que lo
+    // congelado tiene que empezar a descongelarse el día antes de cocinarlo, dos días antes
+    // del menú. Ese día sale como alerta propia de la sección Descongelar; si no se marca,
+    // al día siguiente sigue pidiéndose dentro de la tarjeta del tupper ("Antes descongela").
+    state.menuSemanal
+        .filter(e => e.activa && !e.precocinado && hoy === addDaysToISO(e.fecha, -2))
+        .forEach(entrada => {
+            const receta = getReceta(entrada.recetaId);
+            if (!esTupper(receta)) return;
+            getProductosADescongelar(receta, entrada, hoy).forEach(producto => alertas.push({
+                tipo: 'descongelar',
+                prioridad: 2,
+                fecha: entrada.fecha,
+                tipoComida: entrada.tipo_comida,
+                entradaId: entrada.id,
+                descongelar: [producto],
+                titulo: `Descongela ${textoADescongelar(producto)}`,
+                detalle: `Para el tupper de ${receta.nombre}, que preparas ${textoDia(addDaysToISO(entrada.fecha, -1))}`
+            }));
+        });
+
+    // Tarjeta de precocinado con antelación, solo para recetas de precocinado del plato
+    // COMPLETO (esPrecocinadoDeRecetaCompleta()), según su tipo (inicioAvisoPrecocinado()):
+    //  - 'fin_de_semana' → "Precocina con tiempo …": desde el sábado anterior a la receta
+    //    (sabadoAnteriorA(); para una receta de domingo, la víspera) y cada día — sábado,
+    //    domingo y, si no dio tiempo, los siguientes hasta la víspera.
+    //  - 'dia_anterior' → "Prepara el tupper: …": solo la víspera, y es tarea de ese día,
+    //    así que va con la prioridad de "Cocinar hoy" en vez de al final de la sección.
+    // En los dos casos, mientras la entrada del menú no esté marcada "Ya precocinado"
+    // (menu_semanal.precocinado, botón de la propia alerta o casilla del hueco del menú). El
+    // propio día de la receta lo cubre "Cocinar hoy". El precocinado de un ingrediente suelto
+    // no avisa con antelación: se recuerda solo el mismo día, en "Cocinar hoy".
     state.menuSemanal
         .filter(e => e.activa && e.fecha > hoy && !e.precocinado)
         .forEach(entrada => {
             const receta = getReceta(entrada.recetaId);
             if (!esPrecocinadoDeRecetaCompleta(receta)) return;
-            if (hoy < sabadoAnteriorA(entrada.fecha)) return;
+            if (hoy < inicioAvisoPrecocinado(receta, entrada.fecha)) return;
 
+            const tupper = esTupper(receta);
             const comida = TIPO_COMIDA_LABELS[entrada.tipo_comida] || entrada.tipo_comida;
             const cuandoLoNecesitas = `${textoDia(entrada.fecha)} (${comida})`;
             // Lo que haya que descongelar o comprar para poder precocinar va en esta misma
             // tarjeta (destacado; lo de descongelar con su botón "Ya descongelado"), no en
             // alertas aparte. Mientras quede algo pendiente, sube por delante del resto.
-            const descongelar = getPendientesDescongelarParaPrecocinar(receta, entrada);
+            const descongelar = getPendientesDescongelarParaPrecocinar(receta, entrada, hoy);
             const comprar = getFaltantesParaPrecocinar(receta, entrada, hoy);
+            const pendiente = descongelar.length > 0 || comprar.length > 0;
             alertas.push({
                 tipo: 'precocinar',
-                prioridad: descongelar.length > 0 || comprar.length > 0 ? 4 : 5,
+                prioridad: tupper ? (pendiente ? 2 : 3) : (pendiente ? 4 : 5),
                 fecha: entrada.fecha,
                 tipoComida: entrada.tipo_comida,
                 entradaId: entrada.id,
                 descongelar,
                 comprar,
                 recurrente: true,
-                titulo: `Precocina con tiempo ${receta.nombre}`,
+                titulo: tupper ? `Prepara el tupper: ${receta.nombre}` : `Precocina con tiempo ${receta.nombre}`,
                 detalle: `Lo necesitas ${cuandoLoNecesitas}`
             });
         });
@@ -310,7 +393,7 @@ function getAlertas(hoy = todayISO()) {
 
             // Igual que en el precocinado: si aún queda algo congelado que hay que cocinar,
             // va destacado en esta tarjeta y la sube al principio de su sección.
-            const descongelar = getPendientesDescongelarParaPrecocinar(receta, entrada);
+            const descongelar = getPendientesDescongelarParaPrecocinar(receta, entrada, hoy);
             alertas.push({
                 tipo: 'cocinar',
                 prioridad: descongelar.length > 0 ? 2 : 3,
@@ -378,7 +461,7 @@ function alertaClaseCss(tipo) {
 }
 
 // Botones para marcar como hecho en esa entrada del menú y que la alerta deje de salir
-// (marcarPrecocinado() / marcarDescongelado()). "Ya descongelado" marca de una vez todo lo
+// (marcarPrecocinado() / abrirModalDescongelar()). "Ya descongelado" abre la ventana de paquetes de todo lo
 // que la tarjeta pide descongelar (alerta.descongelar); en una tarjeta de precocinado o
 // "Cocinar hoy" va como botón principal, porque es lo primero que hay que hacer.
 function alertaAccionesHtml(alerta) {
@@ -414,7 +497,7 @@ function alertaPendientesAntesHtml(alerta) {
         html += alertaAntesHtml('ic-cart', 'Antes compra', alerta.comprar.map(c => `${formatCantidad(c.cantidad, c.producto.unidad)} ${c.producto.nombre}`));
     }
     if (alerta.descongelar && alerta.descongelar.length > 0) {
-        html += alertaAntesHtml('ic-snow', 'Antes descongela', alerta.descongelar.map(p => p.nombre));
+        html += alertaAntesHtml('ic-snow', 'Antes descongela', alerta.descongelar.map(textoADescongelar));
     }
     return html;
 }
@@ -441,72 +524,6 @@ async function marcarPrecocinado(entradaId) {
     if (!DOM.modalAlertas.classList.contains('hidden')) openAlertasModal();
 }
 
-// Pasa a la Nevera los lotes congelados de un producto que hacen falta para una entrada del
-// menú: por orden de caducidad (primero lo que antes caduca, sin fecha al final) hasta cubrir
-// la cantidad que pide la receta ya escalada por comensales. Los lotes no se parten (un
-// paquete se descongela entero). El detalle de ubicación ("Cajón 2") se borra porque era
-// del congelador. Devuelve cuántos lotes se movieron, o null si no hay ubicación Nevera.
-async function moverADescongelarANevera(entrada, productoId) {
-    const nevera = getUbicacionNevera();
-    if (!nevera) return null;
-    const receta = getReceta(entrada.recetaId);
-    const factor = receta ? (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1) : 1;
-    const necesaria = receta
-        ? getIngredientesReceta(receta.id)
-            .filter(ing => String(ing.productoId) === String(productoId))
-            .reduce((sum, ing) => sum + (parseFloat(ing.cantidad) || 0) * factor, 0)
-        : 0;
-
-    const lotes = getLotesCongelados(productoId).sort((a, b) =>
-        (a.fecha_caducidad || '9999-12-31').localeCompare(b.fecha_caducidad || '9999-12-31')
-    );
-    let acumulado = 0;
-    let movidos = 0;
-    for (const lote of lotes) {
-        if (movidos > 0 && acumulado >= necesaria) break;
-        const res = await apiRequest('editar_despensa_lote', 'PATCH', { id: lote.id, ubicacionId: nevera.id, detalle_ubicacion: null });
-        if (res && res.success) {
-            acumulado += parseFloat(lote.cantidad) || 0;
-            movidos++;
-        }
-    }
-    return movidos;
-}
-
-// "Ya descongelado": se guarda en la entrada del menú (menu_semanal.descongelados, para
-// que ese plato deje de avisar aunque queden otros lotes en el congelador) y se pasan los
-// lotes necesarios a la Nevera (moverADescongelarANevera()). Acepta varios productos a la
-// vez (casillas del modal del menú); `yaGuardado` = true si la entrada ya se guardó con
-// ellos marcados y solo falta mover los lotes.
-async function marcarDescongelado(entradaId, productoIds, { yaGuardado = false } = {}) {
-    const entrada = state.menuSemanal.find(m => String(m.id) === String(entradaId));
-    if (!entrada || productoIds.length === 0) return;
-
-    if (!yaGuardado) {
-        const descongelados = [...new Set([...getDescongeladosEntrada(entrada), ...productoIds.map(String)])].map(Number);
-        const result = await apiRequest('editar_menu_entry', 'PATCH', { id: entrada.id, descongelados });
-        if (!result || !result.success) {
-            showToast(result?.error || 'No se ha podido marcar como descongelado', 'error');
-            return;
-        }
-    }
-
-    let sinNevera = false;
-    let movidos = 0;
-    for (const productoId of productoIds) {
-        const n = await moverADescongelarANevera(entrada, productoId);
-        if (n === null) sinNevera = true;
-        else movidos += n;
-    }
-
-    if (sinNevera) showToast('Marcado como descongelado. No encuentro una ubicación "Nevera": mueve el lote a mano', 'warning');
-    else showToast(movidos > 0 ? `Marcado como descongelado y ${movidos === 1 ? 'lote pasado' : `${movidos} lotes pasados`} a la Nevera` : 'Marcado como descongelado', 'success');
-
-    renderDespensa();     // la ubicación de los lotes ha cambiado (y recalcula la campana)
-    renderMenuSemanal();  // repinta el menú y, vía renderAlertasBadge(), Próximas alertas
-    if (!DOM.modalAlertas.classList.contains('hidden')) openAlertasModal();
-}
-
 // Delegación de clics para los botones "Ya precocinado" / "Ya descongelado" de una lista de
 // alertas (el modal de la campana y la pantalla Próximas alertas se repintan enteros, así que
 // se engancha una sola vez al contenedor).
@@ -519,8 +536,7 @@ function wireAccionesAlertas(container) {
         }
         const btnDescongelado = e.target.closest('[data-descongelado-entrada]');
         if (btnDescongelado) {
-            btnDescongelado.disabled = true; // evita doble clic mientras se mueven los lotes
-            marcarDescongelado(btnDescongelado.dataset.descongeladoEntrada, btnDescongelado.dataset.descongeladoProductos.split(','));
+            abrirModalDescongelar(btnDescongelado.dataset.descongeladoEntrada, btnDescongelado.dataset.descongeladoProductos.split(','));
         }
     });
 }

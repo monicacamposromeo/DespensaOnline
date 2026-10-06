@@ -1,4 +1,4 @@
-const CACHE_NAME = 'despensa-online-v3'; // subir el número al cambiar el set de assets cacheados
+const CACHE_NAME = 'despensa-online-v4'; // subir el número al cambiar el set de assets cacheados
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -15,6 +15,7 @@ const ASSETS_TO_CACHE = [
     './js/menu.js',
     './js/lista-compra.js',
     './js/alertas.js',
+    './js/descongelar.js',
     './js/config.js',
     './js/event-handler.js',
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'

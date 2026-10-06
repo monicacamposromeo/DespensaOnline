@@ -28,6 +28,9 @@ const state = {
     recetaIngredientes: [],
     menuSemanal: [],
     listaCompra: [],
+    // Ajustes de la app compartidos entre dispositivos (tabla `ajustes` en Supabase, o dentro
+    // del archivo de datos en modo Local): { clave: valor }. Ver llevoTupper().
+    ajustes: {},
 
     editingLoteId: null,
     editingRecetaId: null,
@@ -65,6 +68,7 @@ const DOM = {
 
     // App shell / navigation
     btnThemeToggle: document.getElementById('btn-theme-toggle'),
+    inAjusteLlevoTupper: document.getElementById('in-ajuste-llevo-tupper'),
     themeText: document.querySelector('.theme-text'),
     navExitApp: document.getElementById('nav-exit-app'),
     screens: document.querySelectorAll('.app-screen'),
@@ -82,6 +86,15 @@ const DOM = {
     modalAlertas: document.getElementById('modal-alertas'),
     btnCloseModalAlertas: document.getElementById('btn-close-modal-alertas'),
     alertasList: document.getElementById('alertas-list'),
+
+    // Modal: "Ya descongelado" (js/descongelar.js)
+    modalDescongelar: document.getElementById('modal-descongelar'),
+    btnCloseModalDescongelar: document.getElementById('btn-close-modal-descongelar'),
+    btnCancelDescongelar: document.getElementById('btn-cancel-descongelar'),
+    btnConfirmDescongelar: document.getElementById('btn-confirm-descongelar'),
+    descongelarResumen: document.getElementById('descongelar-resumen'),
+    descongelarAvisoNevera: document.getElementById('descongelar-aviso-nevera'),
+    descongelarList: document.getElementById('descongelar-list'),
     btnVerProximasAlertas: document.getElementById('btn-ver-proximas-alertas'),
     screenProximasAlertas: document.getElementById('screen-proximas-alertas'),
     proximasAlertasList: document.getElementById('proximas-alertas-list'),
@@ -116,9 +129,7 @@ const DOM = {
     inCompraProducto: document.getElementById('in-compra-producto'),
     inCompraCantidad: document.getElementById('in-compra-cantidad'),
     btnLimpiarComprados: document.getElementById('btn-limpiar-comprados'),
-    compraListMenu: document.getElementById('compra-list-menu'),
-    compraListMinimo: document.getElementById('compra-list-minimo'),
-    compraListManual: document.getElementById('compra-list-manual'),
+    compraList: document.getElementById('compra-list'),
     compraEmpty: document.getElementById('compra-empty'),
 
     // Modal: en qué recetas se necesita un producto de la lista de la compra
@@ -126,6 +137,7 @@ const DOM = {
     modalCompraInfoTitle: document.getElementById('modal-compra-info-title'),
     btnCloseModalCompraInfo: document.getElementById('btn-close-modal-compra-info'),
     compraInfoResumen: document.getElementById('compra-info-resumen'),
+    compraInfoOrigen: document.getElementById('compra-info-origen'),
     compraInfoList: document.getElementById('compra-info-list'),
 
     // Configuración screen
@@ -196,7 +208,7 @@ const DOM = {
     inRecetaCategoria: document.getElementById('in-receta-categoria'),
     inRecetaTiempo: document.getElementById('in-receta-tiempo'),
     inRecetaComensales: document.getElementById('in-receta-comensales'),
-    inRecetaRequiereCocinado: document.getElementById('in-receta-requiere-cocinado'),
+    inRecetaTipoPrecocinado: document.getElementById('in-receta-tipo-precocinado'),
     inRecetaInstrucciones: document.getElementById('in-receta-instrucciones'),
     btnAddIngredienteRow: document.getElementById('btn-add-ingrediente-row'),
     ingredientesRows: document.getElementById('ingredientes-rows'),
@@ -305,6 +317,32 @@ function recetaRequierePrecocinado(receta) {
     if (!receta) return false;
     if (receta.requiere_cocinado !== false) return true;
     return getIngredientesReceta(receta.id).some(ing => ing.requiere_cocinado === true);
+}
+
+// Tipo de precocinado del plato completo (§3): null si no lleva (receta de montar),
+// 'fin_de_semana' (guiso que se deja hecho el finde anterior) o 'dia_anterior' (tupper que
+// se prepara la víspera). Las recetas guardadas antes de existir recetas.tipo_precocinado
+// no lo tienen: si requieren precocinado, se tratan como de fin de semana, que era lo único
+// que había.
+function getTipoPrecocinado(receta) {
+    if (!receta || receta.requiere_cocinado === false) return null;
+    return receta.tipo_precocinado === 'dia_anterior' ? 'dia_anterior' : 'fin_de_semana';
+}
+
+// Ajuste "Me llevo tupper al trabajo" (Ajustes, state.ajustes.llevo_tupper; activo si nunca
+// se ha tocado). Cuando está desactivado (p. ej. meses en que se come en casa), las recetas
+// 'dia_anterior' se cocinan el mismo día: sin tarjeta "Prepara el tupper" la víspera, ver
+// getTipoPrecocinadoEfectivo().
+function llevoTupper() {
+    return state.ajustes.llevo_tupper !== false;
+}
+
+// Tipo de precocinado que manda en las alertas: el de la receta, salvo un tupper cuando el
+// ajuste está desactivado, que pasa a 'mismo_dia' (cocinar al momento: "Hoy toca cocinar"
+// ese día y lo congelado se descongela la víspera, como cualquier otro plato).
+function getTipoPrecocinadoEfectivo(receta) {
+    const tipo = getTipoPrecocinado(receta);
+    return tipo === 'dia_anterior' && !llevoTupper() ? 'mismo_dia' : tipo;
 }
 
 // Qué entradas del menú semanal (activas, de HOY en adelante — igual que generarListaCompra(),

@@ -80,7 +80,9 @@ function agruparLotesPorProductoYSitio(lotes) {
 // Sub-agrupa por "detalle de ubicación" (el sitio exacto, p. ej. "Cajón 2") dentro de
 // lo que se le pase (toda la despensa o ya filtrada a una ubicación): un <h3> por
 // detalle, en orden alfabético y con "Sin sitio concreto" al final, para clasificar el
-// listado por sitio igual que ya se hace por ubicación.
+// listado por sitio igual que ya se hace por ubicación. Dentro de cada sitio, los
+// productos van por categoría y luego por nombre (compararProductosPorCategoria(),
+// js/state.js), para que lo del mismo tipo (frutas, lácteos…) salga junto.
 function agruparPorDetalleHtml(grupos) {
     const porDetalle = new Map();
     grupos.forEach(g => {
@@ -98,7 +100,7 @@ function agruparPorDetalleHtml(grupos) {
 
     return claves.map(key => {
         const gruposDetalle = porDetalle.get(key).slice()
-            .sort((a, b) => (getProducto(a.productoId)?.nombre || '').localeCompare(getProducto(b.productoId)?.nombre || ''));
+            .sort((a, b) => compararProductosPorCategoria(getProducto(a.productoId), getProducto(b.productoId)));
         const titulo = key ? gruposDetalle[0].detalle_ubicacion : 'Sin sitio concreto';
         return `<h3 class="section-subtitle">${escapeHtml(titulo)}</h3>` + gruposDetalle.map(grupoLoteRowHtml).join('');
     }).join('');

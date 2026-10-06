@@ -112,17 +112,7 @@ async function actualizarListaReposicion() {
 // que lo de la misma sección del súper quede junto.
 function compararItemsCompra(a, b) {
     if (a.comprado !== b.comprado) return a.comprado ? 1 : -1;
-    const productoA = getProducto(a.productoId);
-    const productoB = getProducto(b.productoId);
-    const categoriaA = (productoA?.categoria || '').trim();
-    const categoriaB = (productoB?.categoria || '').trim();
-    if (categoriaA !== categoriaB) {
-        if (!categoriaA) return 1;
-        if (!categoriaB) return -1;
-        const cmp = categoriaA.localeCompare(categoriaB, 'es', { sensitivity: 'base' });
-        if (cmp !== 0) return cmp;
-    }
-    return (productoA?.nombre || '').localeCompare(productoB?.nombre || '', 'es', { sensitivity: 'base' });
+    return compararProductosPorCategoria(getProducto(a.productoId), getProducto(b.productoId));
 }
 
 // ¿Hace falta comprarlo ya? 'hoy' / 'manana' si el menú de hoy o de mañana necesita más de

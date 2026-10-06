@@ -299,6 +299,21 @@ function getDetallesUnicosPorUbicacion(ubicacionId) {
     return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 }
 
+// Orden común de productos en listados (despensa, lista de la compra): por categoría
+// (alfabética, "sin categoría" al final) y, dentro de cada categoría, por nombre. Así lo
+// del mismo tipo (frutas, lácteos…) queda junto.
+function compararProductosPorCategoria(productoA, productoB) {
+    const categoriaA = (productoA?.categoria || '').trim();
+    const categoriaB = (productoB?.categoria || '').trim();
+    if (categoriaA !== categoriaB) {
+        if (!categoriaA) return 1;
+        if (!categoriaB) return -1;
+        const cmp = categoriaA.localeCompare(categoriaB, 'es', { sensitivity: 'base' });
+        if (cmp !== 0) return cmp;
+    }
+    return (productoA?.nombre || '').localeCompare(productoB?.nombre || '', 'es', { sensitivity: 'base' });
+}
+
 function getReceta(id) {
     return state.recetas.find(r => String(r.id) === String(id));
 }

@@ -498,7 +498,11 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .tag-origen.origen-manual { background: var(--bg-sunken); color: var(--text-secondary); }
 .compra-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
 .compra-leyenda-texto { font-size: 0.8rem; color: var(--text-muted); flex-basis: 100%; }
-.compra-info-origen { margin: 0 0 6px; }
+.compra-info-origen { margin: 0 0 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+/* Un bloque por motivo dentro de la ventana de detalle de un producto de la compra. */
+.compra-info-motivo { padding: 10px 0; border-top: 1px solid var(--border-color); }
+.compra-info-motivo:first-child { border-top: none; padding-top: 0; }
+.compra-info-motivo-cabecera { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 0.9rem; }
 .tag-supermercado {
     display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px;
     background: var(--primary-light); color: var(--primary);

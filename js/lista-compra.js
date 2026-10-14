@@ -162,16 +162,43 @@ function renderCompraChipsSupermercado() {
     ).join('');
 }
 
+// La lista muestra UNA fila por producto aunque esté por varios motivos (menú,
+// reposición, a mano): las filas de lista_compra del mismo producto se agrupan
+// (agruparListaCompra()). La fila enseña todas las etiquetas de origen y la MAYOR de sus
+// cantidades (no la suma: cada motivo ya cuenta con lo que hay en la despensa, así que
+// comprar la mayor cubre a todos); al tocarla, la ventana detalla cada motivo con su
+// cantidad. Lo ya comprado se agrupa aparte, para no mezclar una fila tachada con una
+// pendiente del mismo producto.
+let compraGruposActuales = new Map();
+
+// Orden de los motivos dentro de un grupo y del color del borde de la fila (el primero manda).
+const ORDEN_ORIGEN_COMPRA = ['menu', 'minimo', 'manual'];
+
+function agruparListaCompra(items) {
+    const grupos = new Map();
+    items.forEach(item => {
+        const key = `${item.productoId}|${item.comprado ? 1 : 0}`;
+        if (!grupos.has(key)) grupos.set(key, { key, productoId: item.productoId, comprado: !!item.comprado, filas: [] });
+        grupos.get(key).filas.push(item);
+    });
+    grupos.forEach(g => {
+        g.filas.sort((a, b) => ORDEN_ORIGEN_COMPRA.indexOf(a.origen) - ORDEN_ORIGEN_COMPRA.indexOf(b.origen));
+        g.cantidad = Math.max(...g.filas.map(f => parseFloat(f.cantidad) || 0));
+    });
+    return [...grupos.values()];
+}
+
 function renderListaCompra() {
     renderCompraChipsSupermercado();
     const filtrando = state.compraFiltro.supermercado !== 'todos';
-    // Una única lista, sin separar por origen: ordenada por categoría y nombre
-    // (compararItemsCompra()), y cada fila indica de dónde viene (color + etiqueta).
-    const items = state.listaCompra.filter(pasaFiltroSupermercado).sort(compararItemsCompra);
+    // Una única lista, sin separar por origen: una fila por producto, ordenada por
+    // categoría y nombre (compararItemsCompra()), con lo comprado al final.
+    const grupos = agruparListaCompra(state.listaCompra.filter(pasaFiltroSupermercado)).sort(compararItemsCompra);
+    compraGruposActuales = new Map(grupos.map(g => [g.key, g]));
 
     DOM.compraEmpty.classList.toggle('hidden', state.listaCompra.length > 0);
-    DOM.compraList.innerHTML = items.length > 0
-        ? items.map(compraItemHtml).join('')
+    DOM.compraList.innerHTML = grupos.length > 0
+        ? grupos.map(compraGrupoHtml).join('')
         : filtrando && state.listaCompra.length > 0
             ? '<p class="empty-state-inline">Nada de este supermercado en la lista.</p>'
             : '';
@@ -180,12 +207,12 @@ function renderListaCompra() {
         cb.addEventListener('change', () => toggleCompradoCompra(cb.dataset.compraCheckbox, cb.checked));
     });
     DOM.compraList.querySelectorAll('[data-compra-delete]').forEach(btn => {
-        btn.addEventListener('click', () => deleteCompraItem(btn.dataset.compraDelete));
+        btn.addEventListener('click', () => deleteCompraGrupo(btn.dataset.compraDelete));
     });
     DOM.compraList.querySelectorAll('[data-compra-info]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const item = state.listaCompra.find(li => String(li.id) === btn.dataset.compraInfo);
-            if (item) openCompraInfoModal(item);
+            const grupo = compraGruposActuales.get(btn.dataset.compraInfo);
+            if (grupo) openCompraInfoModal(grupo);
         });
     });
 }
@@ -201,7 +228,25 @@ function getOrigenCompra(item) {
     return ORIGEN_COMPRA[item.origen] || ORIGEN_COMPRA.manual;
 }
 
-// Para las filas de "Reposición automática" (origen='minimo'): cuál es el mínimo
+function tagOrigenHtml(item) {
+    const origen = getOrigenCompra(item);
+    return `<span class="tag-origen ${origen.clase}">${origen.etiqueta}</span>`;
+}
+
+// Una etiqueta por motivo distinto (si hay dos filas "A mano", una sola etiqueta).
+function tagsOrigenGrupoHtml(grupo) {
+    const vistos = new Set();
+    return grupo.filas
+        .filter(f => {
+            if (vistos.has(f.origen)) return false;
+            vistos.add(f.origen);
+            return true;
+        })
+        .map(tagOrigenHtml)
+        .join(' ');
+}
+
+// Para los motivos de "Reposición automática" (origen='minimo'): cuál es el mínimo
 // configurado en productos.stock_minimo y cuánto hay ahora mismo en la despensa, para
 // no tener que ir a Configuración a comprobar por qué ha saltado esta reposición.
 function compraMinimoMetaHtml(productoId, producto) {
@@ -210,45 +255,46 @@ function compraMinimoMetaHtml(productoId, producto) {
     return `Mínimo ${escapeHtml(formatCantidad(minimo, producto.unidad))} · Tienes ${escapeHtml(formatCantidad(disponible, producto.unidad))}`;
 }
 
-// Detalle bajo el nombre: la categoría del producto (sustituye a los encabezados de
-// categoría), su supermercado como etiqueta y, en "Reposición automática", el mínimo y
-// lo que tienes.
-function compraItemMetaHtml(item, producto) {
-    const origen = getOrigenCompra(item);
-    const partes = [`<span class="tag-origen ${origen.clase}">${origen.etiqueta}</span>`];
+// Detalle bajo el nombre: las etiquetas de origen, el supermercado, la categoría del
+// producto (sustituye a los encabezados de categoría) y, si uno de los motivos es la
+// reposición automática, el mínimo y lo que tienes.
+function compraItemMetaHtml(grupo, producto) {
+    const partes = [tagsOrigenGrupoHtml(grupo)];
     if (producto.supermercado) partes.push(`<span class="tag-supermercado">${escapeHtml(producto.supermercado)}</span>`);
     if (producto.categoria) partes.push(escapeHtml(producto.categoria));
-    if (item.origen === 'minimo') partes.push(compraMinimoMetaHtml(item.productoId, producto));
-    return partes.length > 0 ? `<span class="item-meta">${partes.join(' · ')}</span>` : '';
+    if (grupo.filas.some(f => f.origen === 'minimo')) partes.push(compraMinimoMetaHtml(grupo.productoId, producto));
+    return `<span class="item-meta">${partes.join(' · ')}</span>`;
 }
 
-function compraItemHtml(item) {
-    const producto = getProducto(item.productoId);
+function compraGrupoHtml(grupo) {
+    const producto = getProducto(grupo.productoId);
     if (!producto) return '';
-    // Solo el checkbox marca como comprado. El resto de la fila (botón) abre siempre la
-    // ventana que explica de dónde viene el producto (openCompraInfoModal()), sea cual sea
-    // su origen. El borde izquierdo de color y la etiqueta dicen el origen de un vistazo.
-    const nombreHtml = `<span class="item-main"><span class="item-name">${escapeHtml(producto.nombre)}</span>${compraItemMetaHtml(item, producto)}</span>`;
+    // Solo el checkbox marca como comprado (todas las filas del producto a la vez). El
+    // resto de la fila (botón) abre siempre la ventana con el detalle de cada motivo
+    // (openCompraInfoModal()). El borde izquierdo toma el color del motivo principal.
+    const nombreHtml = `<span class="item-main"><span class="item-name">${escapeHtml(producto.nombre)}</span>${compraItemMetaHtml(grupo, producto)}</span>`;
+    const varios = grupo.filas.length > 1;
     return `
-        <div class="compra-item ${getOrigenCompra(item).clase} ${item.comprado ? 'comprado' : ''}">
+        <div class="compra-item ${getOrigenCompra(grupo.filas[0]).clase} ${grupo.comprado ? 'comprado' : ''}">
             <label class="compra-item-checkbox" title="Marcar como comprado">
-                <input type="checkbox" data-compra-checkbox="${item.id}" ${item.comprado ? 'checked' : ''} aria-label="Comprado">
+                <input type="checkbox" data-compra-checkbox="${grupo.key}" ${grupo.comprado ? 'checked' : ''} aria-label="Comprado">
             </label>
-            <button type="button" class="compra-item-info" data-compra-info="${item.id}">
+            <button type="button" class="compra-item-info" data-compra-info="${grupo.key}">
                 <span class="mono mono-sm">${escapeHtml(monogramLetter(producto.nombre))}</span>
                 ${nombreHtml}
-                ${compraUrgenciaHtml(item)}
-                <span class="compra-item-cantidad">${formatCantidad(item.cantidad, producto.unidad)}</span>
+                ${compraUrgenciaHtml(grupo)}
+                <span class="compra-item-cantidad"${varios ? ' title="La mayor de las cantidades de sus motivos; toca para ver el detalle"' : ''}>${formatCantidad(grupo.cantidad, producto.unidad)}</span>
             </button>
-            <button type="button" class="row-delete" data-compra-delete="${item.id}" title="Quitar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            <button type="button" class="row-delete" data-compra-delete="${grupo.key}" title="${varios ? 'Quitar (todos sus motivos)' : 'Quitar'}"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
         </div>
     `;
 }
 
 /* ==========================================================================
    Modal: de dónde viene un producto de la lista (se abre al tocar cualquier
-   fila). Del menú: en qué recetas se necesita y cuánto. Reposición: mínimo y
-   lo que tienes. A mano: cuándo se añadió.
+   fila). Un bloque por motivo, cada uno con su cantidad. Del menú: en qué
+   recetas se necesita y cuánto. Reposición: mínimo y lo que tienes. A mano:
+   cuándo se añadió.
    ========================================================================== */
 function compraInfoRowHtml(uso, unidad) {
     return `
@@ -262,41 +308,51 @@ function compraInfoRowHtml(uso, unidad) {
     `;
 }
 
-function openCompraInfoModal(item) {
-    const producto = getProducto(item.productoId);
-    if (!producto) return;
-
-    DOM.modalCompraInfoTitle.textContent = producto.nombre;
-    const origen = getOrigenCompra(item);
-    DOM.compraInfoOrigen.className = `tag-origen ${origen.clase}`;
-    DOM.compraInfoOrigen.textContent = origen.etiqueta;
+function compraMotivoHtml(item, producto) {
     const unidad = producto.unidad;
     const disponible = getStockDisponible(item.productoId);
-    DOM.compraInfoList.innerHTML = '';
+    let explicacion;
+    let detalle = '';
 
     if (item.origen === 'menu') {
         // Desglose por receta del menú (recalculado contra el menú actual).
         const usos = getUsosDeProductoEnMenu(item.productoId);
         if (usos.length === 0) {
-            DOM.compraInfoResumen.textContent = 'Viene del menú, pero ya no aparece en el menú actual (puede que el menú haya cambiado desde que se generó la lista).';
+            explicacion = 'Ya no aparece en el menú actual (puede que el menú haya cambiado desde que se generó la lista).';
         } else {
             const necesario = round2(usos.reduce((sum, u) => sum + u.cantidadNecesaria, 0));
-            DOM.compraInfoResumen.textContent =
-                `Viene del menú. Necesario en total: ${formatCantidad(necesario, unidad)} · Ya tienes: ${formatCantidad(disponible, unidad)} · A comprar: ${formatCantidad(item.cantidad, unidad)}`;
-            DOM.compraInfoList.innerHTML = usos.map(u => compraInfoRowHtml(u, unidad)).join('');
+            explicacion = `Necesario en total: ${formatCantidad(necesario, unidad)} · Ya tienes: ${formatCantidad(disponible, unidad)}`;
+            detalle = usos.map(u => compraInfoRowHtml(u, unidad)).join('');
         }
     } else if (item.origen === 'minimo') {
         const minimo = parseFloat(producto.stock_minimo) || 0;
-        DOM.compraInfoResumen.textContent =
-            `Reposición automática: tienes ${formatCantidad(disponible, unidad)} y tu mínimo es ${formatCantidad(minimo, unidad)}, así que faltan ${formatCantidad(item.cantidad, unidad)}. ` +
+        explicacion = `Tienes ${formatCantidad(disponible, unidad)} y tu mínimo es ${formatCantidad(minimo, unidad)}. ` +
             'Se actualiza sola al cambiar la despensa; el mínimo se cambia en Ajustes → Catálogo de productos.';
     } else {
         const fecha = (item.fecha_creacion || '').slice(0, 10);
-        DOM.compraInfoResumen.textContent = fecha
-            ? `Lo añadiste a mano el ${nombreDiaSemana(fecha).toLowerCase()} ${formatDate(fecha)}.`
-            : 'Lo añadiste a mano.';
+        explicacion = fecha ? `Lo añadiste a mano el ${nombreDiaSemana(fecha).toLowerCase()} ${formatDate(fecha)}.` : 'Lo añadiste a mano.';
     }
 
+    return `
+        <div class="compra-info-motivo">
+            <p class="compra-info-motivo-cabecera">${tagOrigenHtml(item)} <strong>A comprar: ${escapeHtml(formatCantidad(item.cantidad, unidad))}</strong></p>
+            <p class="config-hint">${escapeHtml(explicacion)}</p>
+            ${detalle ? `<div class="lotes-list-modal">${detalle}</div>` : ''}
+        </div>
+    `;
+}
+
+function openCompraInfoModal(grupo) {
+    const producto = getProducto(grupo.productoId);
+    if (!producto) return;
+
+    DOM.modalCompraInfoTitle.textContent = producto.nombre;
+    DOM.compraInfoOrigenes.innerHTML = tagsOrigenGrupoHtml(grupo);
+    DOM.compraInfoResumen.textContent = grupo.filas.length > 1
+        ? `Está en la lista por ${grupo.filas.length} motivos. En la lista se muestra la mayor cantidad (${formatCantidad(grupo.cantidad, producto.unidad)}), que ya cubre a todos.`
+        : '';
+    DOM.compraInfoResumen.classList.toggle('hidden', grupo.filas.length <= 1);
+    DOM.compraInfoList.innerHTML = grupo.filas.map(f => compraMotivoHtml(f, producto)).join('');
     DOM.modalCompraInfo.classList.remove('hidden');
 }
 
@@ -304,13 +360,24 @@ function closeCompraInfoModal() {
     DOM.modalCompraInfo.classList.add('hidden');
 }
 
-async function toggleCompradoCompra(id, comprado) {
-    await apiRequest('editar_lista_compra_item', 'PATCH', { id, comprado });
+// Marcar/desmarcar un producto afecta a todas sus filas (todos sus motivos).
+async function toggleCompradoCompra(grupoKey, comprado) {
+    const grupo = compraGruposActuales.get(grupoKey);
+    if (!grupo) return;
+    for (const fila of grupo.filas) {
+        await apiRequest('editar_lista_compra_item', 'PATCH', { id: fila.id, comprado });
+    }
     renderListaCompra();
 }
 
-async function deleteCompraItem(id) {
-    await apiRequest('eliminar_lista_compra_item', 'DELETE', { id });
+// Quitar un producto quita todas sus filas. Lo del menú vuelve si se regenera la lista
+// desde el menú, y lo de reposición vuelve solo mientras siga por debajo del mínimo.
+async function deleteCompraGrupo(grupoKey) {
+    const grupo = compraGruposActuales.get(grupoKey);
+    if (!grupo) return;
+    for (const fila of grupo.filas) {
+        await apiRequest('eliminar_lista_compra_item', 'DELETE', { id: fila.id });
+    }
     renderListaCompra();
 }
 

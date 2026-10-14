@@ -137,7 +137,7 @@ const DOM = {
     modalCompraInfoTitle: document.getElementById('modal-compra-info-title'),
     btnCloseModalCompraInfo: document.getElementById('btn-close-modal-compra-info'),
     compraInfoResumen: document.getElementById('compra-info-resumen'),
-    compraInfoOrigen: document.getElementById('compra-info-origen'),
+    compraInfoOrigenes: document.getElementById('compra-info-origenes'),
     compraInfoList: document.getElementById('compra-info-list'),
 
     // Configuración screen

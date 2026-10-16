@@ -39,6 +39,11 @@ function todayISO() {
     return formatISODate(new Date());
 }
 
+// Minúsculas y sin tildes/diacríticos, para comparar textos en búsquedas ("jamon" == "Jamón").
+function normalizarTexto(str) {
+    return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)

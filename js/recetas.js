@@ -97,11 +97,7 @@ function openRecetaModal(receta = null) {
 
     DOM.ingredientesRows.innerHTML = '';
     const ingredientes = receta ? getIngredientesReceta(receta.id) : [];
-    if (ingredientes.length > 0) {
-        ingredientes.forEach(ing => addIngredienteRow(ing.productoId, ing.cantidad, ing.requiere_cocinado === true));
-    } else {
-        addIngredienteRow();
-    }
+    ingredientes.forEach(ing => addIngredienteRow(ing.productoId, ing.cantidad, ing.requiere_cocinado === true));
 
     DOM.modalReceta.classList.remove('hidden');
 }
@@ -115,28 +111,30 @@ function closeRecetaModal() {
 // necesita precocinado por separado (p. ej. el arroz de unas fajitas), independientemente
 // del interruptor general de la receta (recetaRequierePrecocinado(), js/state.js) — no
 // hace falta marcar cada ingrediente de un guiso, para eso está el interruptor general.
-function addIngredienteRow(productoId = null, cantidad = '', requiereCocinado = false) {
+//
+// El producto se elige en el selector (abrirSelectorIngredientes()) y la fila lo muestra
+// como texto fijo. Sin productoId (nuevoNombre, aunque sea ''), la fila es de un producto
+// que aún no existe: lleva los campos para crearlo y se crea al guardar la receta.
+function addIngredienteRow(productoId = null, cantidad = '', requiereCocinado = false, nuevoNombre = null) {
     const item = document.createElement('div');
     item.className = 'ingrediente-item';
-
-    const options = state.productos
-        .filter(p => p.activa)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
-        .map(p => `<option value="${p.id}" ${String(p.id) === String(productoId) ? 'selected' : ''}>${escapeHtml(p.nombre)} (${escapeHtml(p.unidad)})</option>`)
-        .join('') + `<option value="${PRODUCTO_NUEVO_VALUE}">+ Crear producto nuevo…</option>`;
+    const esNuevo = productoId === null;
+    item.dataset.productoId = esNuevo ? '' : String(productoId);
+    const producto = esNuevo ? null : getProducto(productoId);
 
     item.innerHTML = `
         <div class="ingrediente-row">
-            <select class="form-select ingrediente-producto">${options}</select>
-            <input type="number" class="form-input ingrediente-cantidad" min="0" step="0.01" placeholder="Cantidad" value="${cantidad}">
+            <span class="ingrediente-nombre">${esNuevo ? 'Producto nuevo' : escapeHtml(producto?.nombre || '?')}</span>
+            <input type="number" class="form-input ingrediente-cantidad" min="0" step="0.01" placeholder="Cantidad" value="${escapeHtml(cantidad)}">
+            ${producto ? `<span class="ingrediente-unidad">${escapeHtml(producto.unidad)}</span>` : ''}
             <label class="ingrediente-precocinado" title="Requiere precocinado">
                 <input type="checkbox" class="ingrediente-requiere-cocinado" ${requiereCocinado ? 'checked' : ''}>
                 <span>Precocinar</span>
             </label>
             <button type="button" class="btn-icon-only btn-remove-ingrediente" title="Quitar ingrediente">×</button>
         </div>
-        <div class="nuevo-producto-fields hidden">
-            <input type="text" class="form-input nuevo-producto-nombre" placeholder="Nombre del producto nuevo">
+        <div class="nuevo-producto-fields ${esNuevo ? '' : 'hidden'}">
+            <input type="text" class="form-input nuevo-producto-nombre" placeholder="Nombre del producto nuevo" value="${escapeHtml(nuevoNombre || '')}">
             <div class="form-row">
                 <div class="field-with-add">
                     <select class="form-select nuevo-producto-categoria">${buildCategoriaOptionsHtml()}</select>
@@ -153,16 +151,78 @@ function addIngredienteRow(productoId = null, cantidad = '', requiereCocinado = 
         </div>
     `;
 
-    const select = item.querySelector('.ingrediente-producto');
-    const nuevoFields = item.querySelector('.nuevo-producto-fields');
-    const syncNuevoVisibility = () => nuevoFields.classList.toggle('hidden', select.value !== PRODUCTO_NUEVO_VALUE);
-    select.addEventListener('change', syncNuevoVisibility);
-    syncNuevoVisibility();
-
     wireCategoriaSelect(item.querySelector('.nuevo-producto-categoria'), item.querySelector('.nuevo-producto-categoria-nueva'));
 
     item.querySelector('.btn-remove-ingrediente').addEventListener('click', () => item.remove());
     DOM.ingredientesRows.appendChild(item);
+    return item;
+}
+
+/* ==========================================================================
+   Selector de ingredientes (js/selector.js): se marcan varios productos a la vez
+   y a cada uno se le pone su cantidad y, si hace falta, "Precocinar".
+   ========================================================================== */
+function abrirSelectorIngredientes() {
+    const yaEnReceta = new Set(
+        [...DOM.ingredientesRows.querySelectorAll('.ingrediente-item')].map(i => i.dataset.productoId).filter(Boolean)
+    );
+
+    // "Más usados": los productos que más aparecen como ingrediente en todas las recetas.
+    const usos = new Map();
+    state.recetaIngredientes.forEach(ri => usos.set(String(ri.productoId), (usos.get(String(ri.productoId)) || 0) + 1));
+    const masUsados = [...usos.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([id]) => id)
+        .filter(id => getProducto(id)?.activa)
+        .slice(0, 8);
+
+    abrirSelector({
+        titulo: 'Añadir ingredientes',
+        items: state.productos.filter(p => p.activa).map(p => ({
+            id: p.id,
+            nombre: p.nombre,
+            categoria: p.categoria,
+            meta: `Unidad: ${p.unidad}${yaEnReceta.has(String(p.id)) ? ' · ya está en la receta' : ''}`
+        })),
+        recientes: masUsados,
+        recientesLabel: 'Más usados',
+        multi: true,
+        contador: false,
+        panel: {
+            inicial: () => ({ cantidad: '', requiereCocinado: false }),
+            html: (id, v) => {
+                const unidad = getProducto(id)?.unidad || '';
+                return `
+                    <div class="selector-campos">
+                        <label class="selector-campo">
+                            <span>Cantidad${unidad ? ` (${escapeHtml(unidad)})` : ''}</span>
+                            <input type="number" class="form-input" data-campo="cantidad" min="0" step="0.01" value="${escapeHtml(v.cantidad)}">
+                        </label>
+                        <label class="selector-campo selector-campo-check">
+                            <input type="checkbox" data-campo="requiereCocinado" ${v.requiereCocinado ? 'checked' : ''}>
+                            <span>Precocinar aparte</span>
+                        </label>
+                    </div>`;
+            }
+        },
+        validar: (seleccion, valores) => {
+            for (const id of seleccion.keys()) {
+                if (!(parseFloat(valores.get(String(id)).cantidad) > 0)) return `Indica la cantidad de ${getProducto(id)?.nombre || 'el ingrediente'}.`;
+            }
+            return null;
+        },
+        confirmarLabel: total => `Añadir a la receta (${total})`,
+        onConfirm: (seleccion, valores) => {
+            seleccion.forEach((_, id) => {
+                const v = valores.get(String(id));
+                addIngredienteRow(id, v.cantidad, v.requiereCocinado);
+            });
+        },
+        onCrear: nombre => {
+            const fila = addIngredienteRow(null, '', false, nombre);
+            fila.scrollIntoView({ block: 'nearest' });
+        }
+    });
 }
 
 // Async porque, si una fila pide crear un producto nuevo, hay que esperar a que se cree
@@ -175,8 +235,8 @@ async function collectIngredientesFromForm() {
         const cantidad = item.querySelector('.ingrediente-cantidad').value;
         if (!(parseFloat(cantidad) > 0)) continue;
 
-        let productoId = item.querySelector('.ingrediente-producto').value;
-        if (productoId === PRODUCTO_NUEVO_VALUE) {
+        let productoId = item.dataset.productoId;
+        if (!productoId) {
             productoId = await crearProductoDesdeCampos(
                 item.querySelector('.nuevo-producto-nombre').value,
                 resolveCategoriaValue(item.querySelector('.nuevo-producto-categoria'), item.querySelector('.nuevo-producto-categoria-nueva')),

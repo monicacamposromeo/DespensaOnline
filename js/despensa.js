@@ -5,16 +5,19 @@
 function renderDespensa() {
     renderAlertasCaducidad();
 
-    const search = state.despensaFiltro.search.trim().toLowerCase();
+    const search = normalizarTexto(state.despensaFiltro.search);
     const ubicacionId = state.despensaFiltro.ubicacion;
+
+    const desde = fechaDesdeFiltroAnadido();
 
     const lotesActivos = state.despensa.filter(l => l.activa);
     const lotesFiltrados = lotesActivos
         .filter(l => ubicacionId === 'todas' || String(l.ubicacionId) === String(ubicacionId))
+        .filter(l => !desde || (l.fecha_entrada || '') >= desde)
         .filter(l => {
             if (!search) return true;
             const producto = getProducto(l.productoId);
-            return producto && producto.nombre.toLowerCase().includes(search);
+            return producto && normalizarTexto(producto.nombre).includes(search);
         });
 
     DOM.despensaEmpty.classList.toggle('hidden', lotesActivos.length > 0);
@@ -46,6 +49,18 @@ function renderDespensa() {
     // despensa, así que se recalcula cada vez que esta cambia; no bloquea el render
     // de la propia despensa, solo actualiza la Lista de la Compra al terminar.
     actualizarListaReposicion().then(renderListaCompra);
+}
+
+// Fecha ISO mínima de "fecha_entrada" según el filtro "Añadido" (vacío = sin filtro).
+function fechaDesdeFiltroAnadido() {
+    const { anadido, anadidoDesde } = state.despensaFiltro;
+    if (anadido === 'fecha') return anadidoDesde;
+    if (anadido === 'hoy') return todayISO();
+    const dias = parseInt(anadido, 10);
+    if (!dias) return '';
+    const d = new Date();
+    d.setDate(d.getDate() - dias);
+    return formatISODate(d);
 }
 
 // Junta los lotes que son, a efectos de visualización, "el mismo sitio": mismo producto,
@@ -186,6 +201,213 @@ function grupoLoteRowHtml(grupo) {
     `;
 }
 
+/* ==========================================================================
+   Alta rápida de varios productos (selector con contador, js/selector.js)
+   Cada toque en "+" es un paquete; se crea con los valores habituales del producto
+   (los de su último lote: cantidad, ubicación, detalle) y la fecha de hoy. Después se
+   corrige lo que haga falta tocando la fila en la despensa.
+   ========================================================================== */
+
+// Lotes (activos o no) del producto, del más reciente al más antiguo por fecha de entrada.
+function lotesRecientesDeProducto(productoId) {
+    return state.despensa
+        .filter(l => String(l.productoId) === String(productoId))
+        .sort((a, b) => (b.fecha_entrada || '').localeCompare(a.fecha_entrada || ''));
+}
+
+// Valores con los que se crea un paquete nuevo del producto: los del último lote que tuvo;
+// sin historial, cantidad 1 en la primera ubicación activa.
+function valoresHabitualesDeProducto(productoId) {
+    const ultimo = lotesRecientesDeProducto(productoId)[0];
+    const ubicacionValida = ultimo && getUbicacion(ultimo.ubicacionId)?.activa;
+    return {
+        cantidad: ultimo && parseFloat(ultimo.cantidad) > 0 ? parseFloat(ultimo.cantidad) : 1,
+        ubicacionId: ubicacionValida ? ultimo.ubicacionId : state.ubicaciones.find(u => u.activa)?.id,
+        detalle_ubicacion: ubicacionValida ? (ultimo.detalle_ubicacion || null) : null,
+        no_requiere_descongelar: ubicacionValida ? !!ultimo.no_requiere_descongelar : false,
+        hayHistorial: !!ultimo
+    };
+}
+
+// Productos activos de los últimos lotes añadidos, sin repetir, para el bloque "Recientes".
+function idsProductosRecientes(max = 8) {
+    const vistos = new Set();
+    state.despensa
+        .slice()
+        .sort((a, b) => (b.fecha_entrada || '').localeCompare(a.fecha_entrada || ''))
+        .forEach(l => {
+            if (vistos.size < max && getProducto(l.productoId)?.activa) vistos.add(String(l.productoId));
+        });
+    return [...vistos];
+}
+
+// "Repetir última compra": un paquete por cada lote añadido el último día con entradas.
+function seleccionUltimaCompra() {
+    const lotes = state.despensa.filter(l => getProducto(l.productoId)?.activa && l.fecha_entrada);
+    const ultimaFecha = lotes.reduce((max, l) => (l.fecha_entrada > max ? l.fecha_entrada : max), '');
+    const mapa = new Map();
+    lotes.filter(l => l.fecha_entrada === ultimaFecha).forEach(l => {
+        const id = String(l.productoId);
+        mapa.set(id, (mapa.get(id) || 0) + 1);
+    });
+    return mapa;
+}
+
+function abrirSelectorDespensa() {
+    if (state.ubicaciones.filter(u => u.activa).length === 0) {
+        showToast('Primero debes crear al menos una ubicación en Configuración.', 'error');
+        return;
+    }
+
+    const items = state.productos.filter(p => p.activa).map(p => {
+        const h = valoresHabitualesDeProducto(p.id);
+        const ubic = getUbicacion(h.ubicacionId);
+        return {
+            id: p.id,
+            nombre: p.nombre,
+            categoria: p.categoria,
+            meta: h.hayHistorial
+                ? `${formatCantidad(h.cantidad, p.unidad)} · ${ubic ? ubic.nombre : '—'}`
+                : `Sin historial · ${p.unidad || 'ud'}`
+        };
+    });
+
+    abrirSelector({
+        titulo: 'Añadir a la despensa',
+        items,
+        recientes: idsProductosRecientes(),
+        multi: true,
+        contador: true,
+        acciones: [{ label: 'Repetir última compra', fn: seleccionUltimaCompra }],
+        panel: panelAltaDespensa(),
+        // Se comprueba antes de cerrar la hoja para no perder lo marcado si falta algo.
+        validar: (seleccion, valores) => {
+            for (const id of seleccion.keys()) {
+                const v = valores.get(String(id));
+                if (!(parseFloat(v.cantidad) > 0)) return `Indica una cantidad válida para ${getProducto(id)?.nombre || 'el producto'}.`;
+                if (v.detalle === DETALLE_NUEVO_VALUE && !v.detalleNuevo.trim()) return `Escribe el nuevo detalle de ubicación de ${getProducto(id)?.nombre || 'el producto'}.`;
+            }
+            return null;
+        },
+        confirmarLabel: total => `Añadir a la despensa (${total})`,
+        onConfirm: anadirSeleccionADespensa,
+        onCrear: nombre => openLoteModal(null, { productoId: PRODUCTO_NUEVO_VALUE, nombreNuevo: nombre })
+    });
+}
+
+// Panel de campos que aparece bajo cada producto marcado en el selector: cantidad por
+// paquete, caducidad y ubicación + detalle (dos desplegables en la misma línea; el detalle
+// depende de la ubicación, como en el formulario de lote).
+function panelAltaDespensa() {
+    const ubicaciones = state.ubicaciones.filter(u => u.activa)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+
+    const opcionesDetalle = (ubicacionId, seleccionado) => {
+        const detalles = getDetallesUnicosPorUbicacion(ubicacionId);
+        // El detalle habitual puede venir de un lote ya gastado y no estar en la lista de activos.
+        if (seleccionado && seleccionado !== DETALLE_NUEVO_VALUE && !detalles.includes(seleccionado)) detalles.push(seleccionado);
+        return `<option value="">Sin detalle</option>`
+            + detalles.map(d => `<option value="${escapeHtml(d)}" ${d === seleccionado ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
+            + `<option value="${DETALLE_NUEVO_VALUE}" ${seleccionado === DETALLE_NUEVO_VALUE ? 'selected' : ''}>+ Nuevo detalle…</option>`;
+    };
+
+    return {
+        inicial: id => {
+            const h = valoresHabitualesDeProducto(id);
+            return {
+                cantidad: String(h.cantidad),
+                caducidad: '',
+                ubicacionId: String(h.ubicacionId),
+                detalle: h.detalle_ubicacion || '',
+                detalleNuevo: '',
+                // Solo aplica en el sitio donde estaba el último lote; se pierde si se cambia de ubicación.
+                noDescongelar: h.no_requiere_descongelar,
+                ubicacionHabitual: String(h.ubicacionId)
+            };
+        },
+        html: (id, v) => {
+            const unidad = getProducto(id)?.unidad || '';
+            return `
+                <div class="selector-campos">
+                    <label class="selector-campo">
+                        <span>Cantidad por paquete${unidad ? ` (${escapeHtml(unidad)})` : ''}</span>
+                        <input type="number" class="form-input" data-campo="cantidad" min="0" step="0.01" value="${escapeHtml(v.cantidad)}">
+                    </label>
+                    <label class="selector-campo">
+                        <span>Caducidad</span>
+                        <input type="date" class="form-input" data-campo="caducidad" value="${escapeHtml(v.caducidad)}">
+                    </label>
+                    <label class="selector-campo">
+                        <span>Ubicación</span>
+                        <select class="form-select" data-campo="ubicacionId">
+                            ${ubicaciones.map(u => `<option value="${u.id}" ${String(u.id) === String(v.ubicacionId) ? 'selected' : ''}>${escapeHtml(u.nombre)}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label class="selector-campo">
+                        <span>Detalle</span>
+                        <select class="form-select" data-campo="detalle">${opcionesDetalle(v.ubicacionId, v.detalle)}</select>
+                    </label>
+                    ${v.detalle === DETALLE_NUEVO_VALUE
+                        ? `<input type="text" class="form-input selector-campo-ancho" data-campo="detalleNuevo" placeholder="ej. Cajón 2, balda de arriba..." value="${escapeHtml(v.detalleNuevo)}">`
+                        : ''}
+                </div>`;
+        },
+        // Al cambiar de ubicación, el detalle anterior ("Cajón 2") deja de tener sentido.
+        alCambiar: (id, v, campo) => {
+            if (campo !== 'ubicacionId') return;
+            v.detalle = '';
+            v.detalleNuevo = '';
+            if (v.ubicacionId !== v.ubicacionHabitual) v.noDescongelar = false;
+        },
+        masivoLabel: 'Guardar todo en…',
+        masivoOpciones: ubicaciones.map(u => ({ value: String(u.id), label: u.nombre })),
+        aplicarMasivo: (v, ubicacionId) => {
+            v.ubicacionId = ubicacionId;
+            v.detalle = '';
+            v.detalleNuevo = '';
+            if (v.ubicacionId !== v.ubicacionHabitual) v.noDescongelar = false;
+        }
+    };
+}
+
+async function anadirSeleccionADespensa(seleccion, valores) {
+    const hoy = todayISO();
+    let anadidos = 0;
+    setLoading(true);
+    try {
+        // Secuencial (no en paralelo): cada alta modifica state.despensa y, en modo Local,
+        // reparte ids correlativos.
+        for (const [productoId, paquetes] of seleccion) {
+            const v = valores.get(String(productoId));
+            const detalle = (v.detalle === DETALLE_NUEVO_VALUE ? v.detalleNuevo : v.detalle).trim();
+            const cantidad = parseFloat(v.cantidad);
+            for (let i = 0; i < paquetes; i++) {
+                const res = await apiRequest('despensa_lote', 'POST', {
+                    productoId,
+                    cantidad,
+                    ubicacionId: v.ubicacionId,
+                    detalle_ubicacion: detalle || null,
+                    fecha_entrada: hoy,
+                    fecha_caducidad: v.caducidad || null,
+                    no_requiere_descongelar: v.noDescongelar
+                });
+                if (!res || !res.success) {
+                    showToast(res?.error || 'Error al añadir a la despensa', 'error');
+                    return;
+                }
+                anadidos++;
+            }
+        }
+        showToast(`${anadidos} paquete${anadidos > 1 ? 's' : ''} añadido${anadidos > 1 ? 's' : ''} a la despensa`, 'success');
+    } finally {
+        setLoading(false);
+        if (anadidos > 0) {
+            renderDespensa();
+            renderListaCompra();
+        }
+    }
+}
+
 // Muestra/oculta los campos de alta rápida de producto según lo elegido en el selector.
 function updateLoteNuevoProductoVisibility() {
     DOM.loteNuevoProductoFields.classList.toggle('hidden', DOM.inLoteProducto.value !== PRODUCTO_NUEVO_VALUE);
@@ -233,7 +455,7 @@ function openLoteModal(lote = null, prefill = null) {
     DOM.modalLoteTitle.textContent = lote ? 'Editar producto en despensa' : 'Añadir producto a la despensa';
     DOM.inLoteId.value = lote ? lote.id : '';
     DOM.inLoteProducto.value = lote ? lote.productoId : (prefill?.productoId ?? (state.productos.find(p => p.activa)?.id ?? PRODUCTO_NUEVO_VALUE));
-    DOM.inLoteNuevoProductoNombre.value = '';
+    DOM.inLoteNuevoProductoNombre.value = prefill?.nombreNuevo || '';
     DOM.inLoteNuevoProductoCategoria.value = '';
     DOM.inLoteNuevoProductoCategoriaNueva.value = '';
     DOM.inLoteNuevoProductoCategoriaNueva.classList.add('hidden');

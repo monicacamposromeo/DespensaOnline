@@ -121,6 +121,14 @@
                 <section class="app-screen active" id="screen-despensa">
                     <input type="text" id="despensa-search" class="search-input" placeholder="Buscar producto…">
                     <div class="chips" id="despensa-chips-ubicacion"></div>
+                    <div class="chips" id="despensa-chips-anadido">
+                        <button type="button" class="chip active" data-value="todo">Añadido: todo</button>
+                        <button type="button" class="chip" data-value="hoy">Hoy</button>
+                        <button type="button" class="chip" data-value="7">Últimos 7 días</button>
+                        <button type="button" class="chip" data-value="30">Últimos 30 días</button>
+                        <button type="button" class="chip" data-value="fecha">Desde fecha…</button>
+                    </div>
+                    <input type="date" id="despensa-anadido-desde" class="form-input hidden" aria-label="Añadido desde" style="margin-bottom:14px">
                     <div id="despensa-alertas" class="alertas-caducidad"></div>
                     <div id="despensa-list" class="lotes-list"></div>
                     <p class="empty-state hidden" id="despensa-empty">Tu despensa está vacía. Añade tu primer producto para empezar.</p>
@@ -465,8 +473,16 @@
                 <input type="hidden" id="in-menu-entry-fecha">
                 <input type="hidden" id="in-menu-entry-tipo">
                 <div class="form-group">
-                    <label for="in-menu-entry-receta">Receta</label>
-                    <select id="in-menu-entry-receta" class="form-select" required></select>
+                    <label>Receta</label>
+                    <!-- El valor vive en este <select> oculto (lo leen varias funciones); se elige con el selector (js/menu.js). -->
+                    <select id="in-menu-entry-receta" class="hidden" tabindex="-1" aria-hidden="true"></select>
+                    <button type="button" class="item-row" id="btn-menu-entry-receta">
+                        <span class="item-main">
+                            <span class="item-name" id="menu-entry-receta-nombre"></span>
+                            <span class="item-meta" id="menu-entry-receta-meta"></span>
+                        </span>
+                        <span class="status-pill neutral">Cambiar</span>
+                    </button>
                 </div>
                 <div class="form-group">
                     <label for="in-menu-entry-comensales">Comensales</label>
@@ -564,6 +580,26 @@
         </div>
     </div>
 
+    <!-- Modal: selector de elementos con búsqueda y categorías (js/selector.js). Va el último
+         de los modales para quedar por encima si se abre desde otro. -->
+    <div class="modal-backdrop hidden" id="modal-selector" data-sin-cierre-fuera>
+        <div class="modal modal-selector">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2 id="selector-title">Elegir</h2>
+                <button class="modal-close" id="btn-close-modal-selector" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <input type="search" id="selector-search" class="search-input" placeholder="Buscar…" autocomplete="off">
+            <div class="chips" id="selector-chips"></div>
+            <div class="selector-acciones hidden" id="selector-acciones"></div>
+            <div class="selector-list lotes-list-modal" id="selector-list"></div>
+            <div class="modal-actions selector-footer" id="selector-footer">
+                <button type="button" class="btn btn-secondary hidden" id="btn-selector-crear">+ Producto nuevo</button>
+                <button type="button" class="btn btn-primary" id="btn-selector-confirm" disabled>Añadir (0)</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container" class="toast-container"></div>
 
     <!-- ==========================================================================
@@ -572,6 +608,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./js/state.js"></script>
     <script src="./js/utils.js"></script>
+    <script src="./js/selector.js"></script>
     <script src="./js/storage.js"></script>
     <script src="./js/api.js"></script>
     <script src="./js/despensa.js"></script>

@@ -5,10 +5,10 @@
 // Orden alfabético por defecto; el usuario puede cambiarlo desde el selector de orden.
 function renderProductosConfig() {
     const { search, sort } = state.productosFiltro;
-    const q = search.trim().toLowerCase();
+    const q = normalizarTexto(search);
 
     let productos = state.productos.filter(p => p.activa);
-    if (q) productos = productos.filter(p => p.nombre.toLowerCase().includes(q));
+    if (q) productos = productos.filter(p => normalizarTexto(p.nombre).includes(q));
 
     const [campo, direccion] = sort.split('-');
     const valorOrden = p => (campo === 'categoria' ? (p.categoria || '') : campo === 'unidad' ? p.unidad : p.nombre) || '';

@@ -132,17 +132,73 @@ function renderAgendaDia() {
     });
 }
 
+// Hueco vacío: primero se elige la receta en el selector y después se abre el formulario ya
+// con ella (comensales, etc.). Plato ya planificado: el formulario se abre directamente y la
+// receta se cambia con el botón "Cambiar".
 function openMenuEntryModal(fecha, tipoComida, entrada = null) {
     if (state.recetas.filter(r => r.activa).length === 0) {
         showToast('Primero debes crear al menos una receta.', 'error');
         return;
     }
+    if (entrada) {
+        mostrarMenuEntryModal(fecha, tipoComida, entrada, null);
+        return;
+    }
+    abrirSelectorReceta(tipoComida, recetaId => mostrarMenuEntryModal(fecha, tipoComida, null, recetaId));
+}
+
+// Selector de receta de una sola elección. "Últimas para <comida>": las recetas que ya se
+// han puesto en ese tipo de comida, las más recientes primero.
+function abrirSelectorReceta(tipoComida, onElegida) {
+    const ultimas = [];
+    state.menuSemanal
+        .filter(m => m.activa && m.tipo_comida === tipoComida)
+        .sort((a, b) => b.fecha.localeCompare(a.fecha))
+        .forEach(m => {
+            const id = String(m.recetaId);
+            if (!ultimas.includes(id) && getReceta(id)?.activa) ultimas.push(id);
+        });
+
+    abrirSelector({
+        titulo: `Elegir receta · ${TIPO_COMIDA_LABELS[tipoComida]}`,
+        items: state.recetas.filter(r => r.activa).map(r => ({
+            id: r.id,
+            nombre: r.nombre,
+            categoria: CATEGORIA_RECETA_LABELS[r.categoria] || r.categoria,
+            meta: [r.tiempo_preparacion_min ? `${r.tiempo_preparacion_min} min` : null, `${r.comensales_base} comensales`].filter(Boolean).join(' · ')
+        })),
+        recientes: ultimas.slice(0, 8),
+        recientesLabel: `Últimas para ${TIPO_COMIDA_LABELS[tipoComida].toLowerCase()}`,
+        multi: false,
+        onConfirm: seleccion => onElegida([...seleccion.keys()][0])
+    });
+}
+
+// Muestra en el botón del formulario la receta que hay en el <select> oculto.
+function actualizarRecetaElegidaMenuEntry() {
+    const receta = getReceta(DOM.inMenuEntryReceta.value);
+    DOM.menuEntryRecetaNombre.textContent = receta ? receta.nombre : 'Elige una receta';
+    DOM.menuEntryRecetaMeta.textContent = receta
+        ? [CATEGORIA_RECETA_LABELS[receta.categoria] || receta.categoria, `${receta.comensales_base} comensales base`].join(' · ')
+        : '';
+}
+
+function handleCambiarRecetaMenuEntry() {
+    abrirSelectorReceta(DOM.inMenuEntryTipo.value, recetaId => {
+        DOM.inMenuEntryReceta.value = recetaId;
+        // El mismo evento de siempre: ajusta comensales, precocinado y descongelados.
+        DOM.inMenuEntryReceta.dispatchEvent(new Event('change'));
+    });
+}
+
+function mostrarMenuEntryModal(fecha, tipoComida, entrada, recetaIdInicial) {
     state.editingMenuEntry = entrada ? entrada.id : null;
     DOM.modalMenuEntryTitle.textContent = `${TIPO_COMIDA_LABELS[tipoComida]} · ${formatDate(fecha)}`;
     DOM.inMenuEntryId.value = entrada ? entrada.id : '';
     DOM.inMenuEntryFecha.value = fecha;
     DOM.inMenuEntryTipo.value = tipoComida;
-    DOM.inMenuEntryReceta.value = entrada ? entrada.recetaId : (state.recetas.find(r => r.activa)?.id || '');
+    DOM.inMenuEntryReceta.value = entrada ? entrada.recetaId : recetaIdInicial;
+    actualizarRecetaElegidaMenuEntry();
     DOM.inMenuEntryComensales.value = entrada ? entrada.comensales : (getReceta(DOM.inMenuEntryReceta.value)?.comensales_base || 2);
     DOM.inMenuEntryPrecocinado.checked = !!(entrada && entrada.precocinado);
     updateMenuEntryPrecocinadoVisibility();

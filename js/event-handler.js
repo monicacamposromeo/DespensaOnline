@@ -42,8 +42,10 @@ function initAlertasActions() {
     wireAccionesAlertas(DOM.proximasAlertasList);
 }
 
+// Clic en el fondo oscuro = cerrar. Los modales con data-sin-cierre-fuera (p. ej. el selector,
+// donde se pierde lo marcado) solo se cierran con su botón "X".
 function initModalBackdropClose() {
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    document.querySelectorAll('.modal-backdrop:not([data-sin-cierre-fuera])').forEach(backdrop => {
         backdrop.addEventListener('click', (e) => {
             if (e.target === backdrop) backdrop.classList.add('hidden');
         });
@@ -110,7 +112,8 @@ function initConfigActions() {
 }
 
 function initDespensaActions() {
-    DOM.btnAddLote.addEventListener('click', () => openLoteModal());
+    initSelector();
+    DOM.btnAddLote.addEventListener('click', abrirSelectorDespensa);
     DOM.btnCloseModalLote.addEventListener('click', closeLoteModal);
     DOM.btnCancelLote.addEventListener('click', closeLoteModal);
     DOM.formLote.addEventListener('submit', handleLoteFormSubmit);
@@ -133,6 +136,18 @@ function initDespensaActions() {
         setActiveChip(DOM.despensaChipsUbicacion, chip);
         renderDespensa();
     });
+    DOM.despensaChipsAnadido.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.despensaFiltro.anadido = chip.dataset.value;
+        setActiveChip(DOM.despensaChipsAnadido, chip);
+        DOM.despensaAnadidoDesde.classList.toggle('hidden', chip.dataset.value !== 'fecha');
+        renderDespensa();
+    });
+    DOM.despensaAnadidoDesde.addEventListener('input', (e) => {
+        state.despensaFiltro.anadidoDesde = e.target.value;
+        renderDespensa();
+    });
 }
 
 function initRecetasActions() {
@@ -142,7 +157,7 @@ function initRecetasActions() {
     DOM.formReceta.addEventListener('submit', handleRecetaFormSubmit);
     DOM.btnDeleteReceta.addEventListener('click', handleDeleteReceta);
     DOM.btnDuplicateReceta.addEventListener('click', handleDuplicateReceta);
-    DOM.btnAddIngredienteRow.addEventListener('click', () => addIngredienteRow());
+    DOM.btnAddIngredienteRow.addEventListener('click', abrirSelectorIngredientes);
     DOM.recetasChipsCategoria.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
@@ -161,7 +176,9 @@ function initMenuActions() {
     DOM.btnCancelMenuEntry.addEventListener('click', closeMenuEntryModal);
     DOM.formMenuEntry.addEventListener('submit', handleMenuEntryFormSubmit);
     DOM.btnDeleteMenuEntry.addEventListener('click', handleDeleteMenuEntry);
+    DOM.btnMenuEntryReceta.addEventListener('click', handleCambiarRecetaMenuEntry);
     DOM.inMenuEntryReceta.addEventListener('change', () => {
+        actualizarRecetaElegidaMenuEntry();
         if (!state.editingMenuEntry) {
             const receta = getReceta(DOM.inMenuEntryReceta.value);
             if (receta) DOM.inMenuEntryComensales.value = receta.comensales_base;

@@ -381,8 +381,9 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .ingredientes-editor-header label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
 .ingrediente-item { margin-bottom: 10px; }
 .ingrediente-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ingrediente-row .ingrediente-producto { flex: 2; min-width: 120px; }
-.ingrediente-row .ingrediente-cantidad { flex: 1; min-width: 70px; }
+.ingrediente-row .ingrediente-nombre { flex: 2 1 120px; min-width: 0; font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
+.ingrediente-row .ingrediente-cantidad { flex: 1 1 80px; min-width: 70px; }
+.ingrediente-row .ingrediente-unidad { flex: 0 0 auto; font-size: 0.82rem; color: var(--text-secondary); }
 .ingrediente-precocinado {
     display: flex; align-items: center; gap: 5px; flex: 0 0 auto; cursor: pointer;
     font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;
@@ -588,6 +589,46 @@ button.compra-item-info, label.compra-item-info { cursor: pointer; }
 .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 .modal-actions .btn-danger { margin-right: auto; }
 
+/* Selector de elementos (js/selector.js): cabecera y pie fijos, solo la lista hace scroll. */
+.modal-selector { display: flex; flex-direction: column; overflow: hidden; height: min(90vh, 760px); }
+.modal-selector .modal-header { flex: 0 0 auto; margin-bottom: 12px; }
+.modal-selector .search-input, .modal-selector .chips, .selector-acciones { flex: 0 0 auto; }
+.modal-selector .chips { padding-bottom: 12px; }
+.selector-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.selector-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 8px; }
+.selector-list .section-subtitle { margin: 12px 0 2px; }
+.selector-footer { flex: 0 0 auto; padding-top: 10px; border-top: 1px solid var(--border-color); }
+.selector-footer .btn-primary { flex: 1 1 auto; }
+.selector-row { padding: 9px 12px; flex-wrap: wrap; }
+/* Panel de campos de la fila marcada: línea propia, sangrada bajo el nombre, en dos columnas
+   (cantidad | caducidad, ubicación | detalle). */
+.selector-panel { flex: 1 0 100%; margin-left: 42px; max-width: calc(100% - 42px); }
+.selector-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+.selector-campo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.selector-campo > span { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selector-campo .form-input, .selector-campo .form-select { width: 100%; padding: 7px 9px; font-size: 0.85rem; }
+.selector-campo-check { flex-direction: row; align-items: center; align-self: end; gap: 7px; padding-bottom: 8px; cursor: pointer; }
+.selector-campo-check > span { font-size: 0.82rem; white-space: normal; }
+.selector-campo-check input { width: 17px; height: 17px; accent-color: var(--primary); flex: 0 0 auto; }
+.selector-campo-ancho { grid-column: 1 / -1; padding: 7px 9px; font-size: 0.85rem; }
+.selector-masivo { padding: 6px 10px; font-size: 0.82rem; border-radius: 999px; }
+.selector-row.selected { border-color: var(--primary); background: var(--primary-light); }
+.selector-chev { color: var(--text-muted); flex: 0 0 auto; }
+.selector-stepper { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.stepper-n { min-width: 1.6em; text-align: center; font-weight: 700; }
+.stepper-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border-color); cursor: pointer;
+    background: var(--bg-card); color: var(--text-primary); font-size: 1.15rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+.stepper-btn:hover { border-color: var(--primary); color: var(--primary); }
+.stepper-add { background: var(--primary-light); color: var(--primary); border-color: transparent; }
+.selector-check {
+    width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--border-color); flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: var(--primary-ink);
+}
+.selector-row.selected .selector-check { background: var(--primary); border-color: var(--primary); }
+
 /* ==========================================================================
    Toasts
    ========================================================================== */
@@ -648,7 +689,7 @@ button.compra-item-info, label.compra-item-info { cursor: pointer; }
         border-radius: 18px; max-width: 480px; padding: 24px;
         animation: modal-pop var(--transition-normal);
     }
-    .modal-large { max-width: 640px; }
+    .modal-large, .modal-selector { max-width: 640px; }
     .sheet-handle { display: none; }
     @keyframes modal-pop { from { transform: translateY(10px) scale(0.98); opacity: 0.6; } to { transform: translateY(0) scale(1); opacity: 1; } }
 

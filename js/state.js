@@ -38,7 +38,7 @@ const state = {
     editingProductoId: null,
     editingLoteGrupoPrefill: null,
 
-    despensaFiltro: { search: '', ubicacion: 'todas' },
+    despensaFiltro: { search: '', ubicacion: 'todas', anadido: 'todo', anadidoDesde: '' },
     recetasFiltro: { categoria: 'todas' },
     productosFiltro: { search: '', sort: 'nombre-asc' },
     compraFiltro: { supermercado: 'todos' },
@@ -102,6 +102,8 @@ const DOM = {
     // Despensa screen
     despensaSearch: document.getElementById('despensa-search'),
     despensaChipsUbicacion: document.getElementById('despensa-chips-ubicacion'),
+    despensaChipsAnadido: document.getElementById('despensa-chips-anadido'),
+    despensaAnadidoDesde: document.getElementById('despensa-anadido-desde'),
     btnAddLote: document.getElementById('btn-add-lote'),
     despensaAlertas: document.getElementById('despensa-alertas'),
     despensaList: document.getElementById('despensa-list'),
@@ -165,6 +167,18 @@ const DOM = {
     inUbicacionIcono: document.getElementById('in-ubicacion-icono'),
     ubicacionesList: document.getElementById('ubicaciones-list'),
 
+    // Modal: selector de elementos (js/selector.js)
+    modalSelector: document.getElementById('modal-selector'),
+    selectorTitle: document.getElementById('selector-title'),
+    btnCloseModalSelector: document.getElementById('btn-close-modal-selector'),
+    selectorSearch: document.getElementById('selector-search'),
+    selectorChips: document.getElementById('selector-chips'),
+    selectorAcciones: document.getElementById('selector-acciones'),
+    selectorList: document.getElementById('selector-list'),
+    selectorFooter: document.getElementById('selector-footer'),
+    btnSelectorCrear: document.getElementById('btn-selector-crear'),
+    btnSelectorConfirm: document.getElementById('btn-selector-confirm'),
+
     // Modal: lote de despensa
     modalLote: document.getElementById('modal-lote'),
     modalLoteTitle: document.getElementById('modal-lote-title'),
@@ -225,6 +239,9 @@ const DOM = {
     inMenuEntryFecha: document.getElementById('in-menu-entry-fecha'),
     inMenuEntryTipo: document.getElementById('in-menu-entry-tipo'),
     inMenuEntryReceta: document.getElementById('in-menu-entry-receta'),
+    btnMenuEntryReceta: document.getElementById('btn-menu-entry-receta'),
+    menuEntryRecetaNombre: document.getElementById('menu-entry-receta-nombre'),
+    menuEntryRecetaMeta: document.getElementById('menu-entry-receta-meta'),
     inMenuEntryComensales: document.getElementById('in-menu-entry-comensales'),
     menuEntryPrecocinadoField: document.getElementById('menu-entry-precocinado-field'),
     inMenuEntryPrecocinado: document.getElementById('in-menu-entry-precocinado'),

@@ -361,13 +361,52 @@ function closeCompraInfoModal() {
     DOM.modalCompraInfo.classList.add('hidden');
 }
 
-// Marcar/desmarcar un producto afecta a todas sus filas (todos sus motivos).
+// Ubicación de la despensa donde caen los productos según se van marcando en la tienda.
+// Se crea sola la primera vez; luego se llevan a su sitio desde la despensa.
+const UBICACION_CARRO_NOMBRE = 'Carro de compra';
+
+async function getUbicacionCarroId() {
+    const existente = state.ubicaciones.find(u => u.activa && u.nombre.trim().toLowerCase() === UBICACION_CARRO_NOMBRE.toLowerCase());
+    if (existente) return existente.id;
+    const res = await apiRequest('ubicacion', 'POST', { nombre: UBICACION_CARRO_NOMBRE, icono: '🛒' });
+    if (!res || !res.success) return null;
+    populateUbicacionSelectors();
+    return res.id;
+}
+
+// Marcar/desmarcar un producto afecta a todas sus filas (todos sus motivos). Al marcarlo
+// se apunta en la despensa, en "Carro de compra"; al desmarcarlo se retira de allí (si
+// sigue en el carro).
 async function toggleCompradoCompra(grupoKey, comprado) {
     const grupo = compraGruposActuales.get(grupoKey);
     if (!grupo) return;
     for (const fila of grupo.filas) {
         await apiRequest('editar_lista_compra_item', 'PATCH', { id: fila.id, comprado });
     }
+
+    let cambioDespensa = false;
+    const ubicacionId = await getUbicacionCarroId();
+    if (ubicacionId) {
+        if (comprado) {
+            const res = await apiRequest('despensa_lote', 'POST', {
+                productoId: grupo.productoId,
+                cantidad: grupo.cantidad,
+                ubicacionId,
+                fecha_entrada: todayISO()
+            });
+            if (res && res.success) cambioDespensa = true;
+            else showToast(res?.error || 'No se pudo añadir al carro de compra', 'error');
+        } else {
+            const enCarro = state.despensa
+                .filter(l => l.activa && String(l.productoId) === String(grupo.productoId) && String(l.ubicacionId) === String(ubicacionId))
+                .sort((a, b) => b.id - a.id)[0];
+            if (enCarro) {
+                await apiRequest('eliminar_despensa_lote', 'DELETE', { id: enCarro.id });
+                cambioDespensa = true;
+            }
+        }
+    }
+    if (cambioDespensa) renderDespensa();
     renderListaCompra();
 }
 

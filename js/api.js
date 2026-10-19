@@ -290,6 +290,8 @@ async function handleSupabaseWriteAction(action, method, data) {
                     requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
                     tipo_precocinado: data.tipo_precocinado || null,
                     instrucciones: data.instrucciones || '',
+                    // Solo si hay producto-tupper: así no hace falta la columna si nunca se usa.
+                    ...(data.producto_tupper_id ? { producto_tupper_id: Number(data.producto_tupper_id) } : {}),
                     activa: true
                 });
                 state.recetas.push(recetaRow);
@@ -311,6 +313,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 if (data.comensales_base !== undefined) payload.comensales_base = Number(data.comensales_base) || 1;
                 if (data.requiere_cocinado !== undefined) payload.requiere_cocinado = !!data.requiere_cocinado;
                 if (data.tipo_precocinado !== undefined) payload.tipo_precocinado = data.tipo_precocinado || null;
+                if (data.producto_tupper_id !== undefined) payload.producto_tupper_id = data.producto_tupper_id ? Number(data.producto_tupper_id) : null;
 
                 const [row] = await supabaseWrite(`recetas?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Receta no encontrada' };
@@ -343,7 +346,9 @@ async function handleSupabaseWriteAction(action, method, data) {
             case 'menu_entry': {
                 const [row] = await supabaseWrite('menu_semanal', 'POST', {
                     fecha: data.fecha, tipo_comida: data.tipo_comida, recetaId: Number(data.recetaId),
-                    comensales: Number(data.comensales) || 1, activa: true
+                    comensales: Number(data.comensales) || 1, activa: true,
+                    // Solo si se usa: así no hace falta la columna si nunca se usa.
+                    ...(data.usa_tupper ? { usa_tupper: true } : {})
                 });
                 state.menuSemanal.push(row);
                 return { success: true, id: row.id, message: 'Menú actualizado' };
@@ -353,6 +358,7 @@ async function handleSupabaseWriteAction(action, method, data) {
                 if (data.recetaId !== undefined) payload.recetaId = Number(data.recetaId);
                 if (data.comensales !== undefined) payload.comensales = Number(data.comensales) || 1;
                 if (data.precocinado !== undefined) payload.precocinado = !!data.precocinado;
+                if (data.usa_tupper !== undefined) payload.usa_tupper = !!data.usa_tupper;
                 if (data.descongelados !== undefined) payload.descongelados = (data.descongelados || []).map(Number);
                 const [row] = await supabaseWrite(`menu_semanal?id=eq.${data.id}`, 'PATCH', payload);
                 if (!row) return { success: false, error: 'Entrada de menú no encontrada' };

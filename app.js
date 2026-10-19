@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initConfigActions();
     initAlertasActions();
     initDescongelarActions();
+    initTuppersActions();
     checkLocalCache();
 });
 

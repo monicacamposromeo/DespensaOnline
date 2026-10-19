@@ -92,6 +92,8 @@ function openRecetaModal(receta = null) {
     DOM.inRecetaComensales.value = receta ? receta.comensales_base : 2;
     DOM.inRecetaTipoPrecocinado.value = receta ? (getTipoPrecocinado(receta) || '') : 'fin_de_semana';
     DOM.inRecetaInstrucciones.value = receta ? (receta.instrucciones || '') : '';
+    DOM.inRecetaTupperProducto.value = receta && receta.producto_tupper_id ? receta.producto_tupper_id : '';
+    actualizarCampoTupperReceta();
     DOM.btnDeleteReceta.classList.toggle('hidden', !receta);
     DOM.btnDuplicateReceta.classList.toggle('hidden', !receta);
 
@@ -100,6 +102,38 @@ function openRecetaModal(receta = null) {
     ingredientes.forEach(ing => addIngredienteRow(ing.productoId, ing.cantidad, ing.requiere_cocinado === true));
 
     DOM.modalReceta.classList.remove('hidden');
+}
+
+/* ==========================================================================
+   Producto de los tuppers congelados de la receta (recetas.producto_tupper_id)
+   Solo se ofrece en platos de fin de semana (guisos). Sin enlace explícito, la app usa un
+   producto ya existente con el nombre de la receta + "congelado"/"tupper" (buscarProductoTupper(),
+   js/tuppers.js); al apuntar tuppers tras precocinar se enlaza solo.
+   ========================================================================== */
+function actualizarCampoTupperReceta() {
+    const visible = DOM.inRecetaTipoPrecocinado.value === 'fin_de_semana' || !!DOM.inRecetaTupperProducto.value;
+    DOM.recetaTupperField.classList.toggle('hidden', !visible);
+
+    const enlazado = DOM.inRecetaTupperProducto.value ? getProducto(DOM.inRecetaTupperProducto.value) : null;
+    // Por nombre solo se sugiere con la receta ya guardada (el nombre del formulario puede cambiar).
+    const porNombre = !enlazado && state.editingRecetaId ? buscarProductoTupper(getReceta(state.editingRecetaId)) : null;
+    DOM.recetaTupperNombre.textContent = enlazado ? enlazado.nombre : porNombre ? porNombre.nombre : 'Ninguno';
+    DOM.recetaTupperMeta.textContent = enlazado ? 'Enlazado a esta receta'
+        : porNombre ? 'Detectado por su nombre'
+        : 'Se creará al apuntar los tuppers tras precocinar';
+    DOM.btnRecetaTupperQuitar.classList.toggle('hidden', !enlazado);
+}
+
+function abrirSelectorProductoTupper() {
+    abrirSelector({
+        titulo: 'Producto de los tuppers',
+        items: state.productos.filter(p => p.activa).map(p => ({ id: p.id, nombre: p.nombre, categoria: p.categoria, meta: `Unidad: ${p.unidad}` })),
+        multi: false,
+        onConfirm: seleccion => {
+            DOM.inRecetaTupperProducto.value = [...seleccion.keys()][0];
+            actualizarCampoTupperReceta();
+        }
+    });
 }
 
 function closeRecetaModal() {
@@ -270,6 +304,10 @@ async function handleRecetaFormSubmit(e) {
         instrucciones: DOM.inRecetaInstrucciones.value,
         ingredientes
     };
+    // Solo se envía si hay enlace (o lo había y se quita): así, si nunca se usa, no hace falta
+    // que exista la columna recetas.producto_tupper_id en la base de datos.
+    const tupperProductoId = DOM.inRecetaTupperProducto.value;
+    if (tupperProductoId || getReceta(state.editingRecetaId)?.producto_tupper_id) payload.producto_tupper_id = tupperProductoId || null;
 
     const result = state.editingRecetaId
         ? await apiRequest('editar_receta', 'PATCH', { id: state.editingRecetaId, ...payload })

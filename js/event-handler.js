@@ -158,6 +158,12 @@ function initRecetasActions() {
     DOM.btnDeleteReceta.addEventListener('click', handleDeleteReceta);
     DOM.btnDuplicateReceta.addEventListener('click', handleDuplicateReceta);
     DOM.btnAddIngredienteRow.addEventListener('click', abrirSelectorIngredientes);
+    DOM.inRecetaTipoPrecocinado.addEventListener('change', actualizarCampoTupperReceta);
+    DOM.btnRecetaTupper.addEventListener('click', abrirSelectorProductoTupper);
+    DOM.btnRecetaTupperQuitar.addEventListener('click', () => {
+        DOM.inRecetaTupperProducto.value = '';
+        actualizarCampoTupperReceta();
+    });
     DOM.recetasChipsCategoria.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
@@ -177,14 +183,22 @@ function initMenuActions() {
     DOM.formMenuEntry.addEventListener('submit', handleMenuEntryFormSubmit);
     DOM.btnDeleteMenuEntry.addEventListener('click', handleDeleteMenuEntry);
     DOM.btnMenuEntryReceta.addEventListener('click', handleCambiarRecetaMenuEntry);
+    DOM.inMenuEntryUsaTupper.addEventListener('change', () => {
+        actualizarTupperMenuEntry();
+        updateMenuEntryPrecocinadoVisibility();
+        renderMenuEntryDescongelados();
+    });
+    DOM.inMenuEntryComensales.addEventListener('input', actualizarTupperMenuEntry);
     DOM.inMenuEntryReceta.addEventListener('change', () => {
         actualizarRecetaElegidaMenuEntry();
         if (!state.editingMenuEntry) {
             const receta = getReceta(DOM.inMenuEntryReceta.value);
             if (receta) DOM.inMenuEntryComensales.value = receta.comensales_base;
         }
-        // Al cambiar de receta, la marca de precocinado de la anterior ya no vale.
+        // Al cambiar de receta, la marca de precocinado y la de tupper de la anterior ya no valen.
         const entrada = state.menuSemanal.find(m => m.id == state.editingMenuEntry);
+        DOM.inMenuEntryUsaTupper.checked = !!(entrada && entrada.usa_tupper && String(entrada.recetaId) === DOM.inMenuEntryReceta.value);
+        actualizarTupperMenuEntry();
         DOM.inMenuEntryPrecocinado.checked = !!(entrada && entrada.precocinado && String(entrada.recetaId) === DOM.inMenuEntryReceta.value);
         updateMenuEntryPrecocinadoVisibility();
         renderMenuEntryDescongelados();

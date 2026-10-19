@@ -81,7 +81,7 @@ function descongelarLoteRowHtml(lote, producto, preseleccionado) {
 }
 
 function descongelarProductoHtml(entrada, producto) {
-    const receta = getReceta(entrada.recetaId);
+    const receta = getRecetaDeEntrada(entrada);
     const necesaria = receta ? getCantidadADescongelar(receta, entrada, producto.id) : 0;
     const lotes = ordenarPorCaducidad(getLotesCongelados(producto.id));
     const preseleccion = new Set(elegirPaquetes(lotes, necesaria).map(l => l.id));

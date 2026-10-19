@@ -400,6 +400,7 @@ function applyWriteAction(action, data, persist) {
                 comensales_base: Number(data.comensales_base) || 1,
                 requiere_cocinado: data.requiere_cocinado !== undefined ? !!data.requiere_cocinado : true,
                 tipo_precocinado: data.tipo_precocinado || null,
+                producto_tupper_id: data.producto_tupper_id ? Number(data.producto_tupper_id) : null,
                 instrucciones: data.instrucciones || '',
                 activa: true
             });
@@ -422,6 +423,7 @@ function applyWriteAction(action, data, persist) {
             if (data.comensales_base !== undefined) r.comensales_base = Number(data.comensales_base) || 1;
             if (data.requiere_cocinado !== undefined) r.requiere_cocinado = !!data.requiere_cocinado;
             if (data.tipo_precocinado !== undefined) r.tipo_precocinado = data.tipo_precocinado || null;
+            if (data.producto_tupper_id !== undefined) r.producto_tupper_id = data.producto_tupper_id ? Number(data.producto_tupper_id) : null;
             if (data.instrucciones !== undefined) r.instrucciones = data.instrucciones;
             if (data.ingredientes !== undefined) {
                 // Sustitución completa de ingredientes (más simple que un diff fino para una app básica)
@@ -447,7 +449,7 @@ function applyWriteAction(action, data, persist) {
 
         case 'menu_entry': {
             const id = nextId(state.menuSemanal);
-            state.menuSemanal.push({ id, fecha: data.fecha, tipo_comida: data.tipo_comida, recetaId: Number(data.recetaId), comensales: Number(data.comensales) || 1, activa: true });
+            state.menuSemanal.push({ id, fecha: data.fecha, tipo_comida: data.tipo_comida, recetaId: Number(data.recetaId), comensales: Number(data.comensales) || 1, usa_tupper: !!data.usa_tupper, activa: true });
             commit();
             return { success: true, id, message: 'Menú actualizado' };
         }
@@ -457,6 +459,7 @@ function applyWriteAction(action, data, persist) {
             if (data.recetaId !== undefined) m.recetaId = Number(data.recetaId);
             if (data.comensales !== undefined) m.comensales = Number(data.comensales) || 1;
             if (data.precocinado !== undefined) m.precocinado = !!data.precocinado;
+            if (data.usa_tupper !== undefined) m.usa_tupper = !!data.usa_tupper;
             if (data.descongelados !== undefined) m.descongelados = (data.descongelados || []).map(Number);
             commit();
             return { success: true, message: 'Menú actualizado' };

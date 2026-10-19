@@ -167,6 +167,21 @@ const DOM = {
     inUbicacionIcono: document.getElementById('in-ubicacion-icono'),
     ubicacionesList: document.getElementById('ubicaciones-list'),
 
+    // Modal: tuppers de un guiso (js/tuppers.js)
+    modalTuppers: document.getElementById('modal-tuppers'),
+    btnCloseModalTuppers: document.getElementById('btn-close-modal-tuppers'),
+    tuppersResumen: document.getElementById('tuppers-resumen'),
+    tuppersProducto: document.getElementById('tuppers-producto'),
+    inTuppersNevera: document.getElementById('in-tuppers-nevera'),
+    inTuppersNeveraLabel: document.getElementById('in-tuppers-nevera-label'),
+    inTuppersCongelador: document.getElementById('in-tuppers-congelador'),
+    inTuppersCongeladorLabel: document.getElementById('in-tuppers-congelador-label'),
+    inTuppersDetalle: document.getElementById('in-tuppers-detalle'),
+    tuppersDetallesList: document.getElementById('tuppers-detalles-list'),
+    inTuppersCaducidad: document.getElementById('in-tuppers-caducidad'),
+    btnCancelTuppers: document.getElementById('btn-cancel-tuppers'),
+    btnConfirmTuppers: document.getElementById('btn-confirm-tuppers'),
+
     // Modal: selector de elementos (js/selector.js)
     modalSelector: document.getElementById('modal-selector'),
     selectorTitle: document.getElementById('selector-title'),
@@ -223,6 +238,12 @@ const DOM = {
     inRecetaTiempo: document.getElementById('in-receta-tiempo'),
     inRecetaComensales: document.getElementById('in-receta-comensales'),
     inRecetaTipoPrecocinado: document.getElementById('in-receta-tipo-precocinado'),
+    recetaTupperField: document.getElementById('receta-tupper-field'),
+    inRecetaTupperProducto: document.getElementById('in-receta-tupper-producto'),
+    btnRecetaTupper: document.getElementById('btn-receta-tupper'),
+    btnRecetaTupperQuitar: document.getElementById('btn-receta-tupper-quitar'),
+    recetaTupperNombre: document.getElementById('receta-tupper-nombre'),
+    recetaTupperMeta: document.getElementById('receta-tupper-meta'),
     inRecetaInstrucciones: document.getElementById('in-receta-instrucciones'),
     btnAddIngredienteRow: document.getElementById('btn-add-ingrediente-row'),
     ingredientesRows: document.getElementById('ingredientes-rows'),
@@ -243,6 +264,9 @@ const DOM = {
     menuEntryRecetaNombre: document.getElementById('menu-entry-receta-nombre'),
     menuEntryRecetaMeta: document.getElementById('menu-entry-receta-meta'),
     inMenuEntryComensales: document.getElementById('in-menu-entry-comensales'),
+    menuEntryTupperField: document.getElementById('menu-entry-tupper-field'),
+    inMenuEntryUsaTupper: document.getElementById('in-menu-entry-usa-tupper'),
+    menuEntryTupperHint: document.getElementById('menu-entry-tupper-hint'),
     menuEntryPrecocinadoField: document.getElementById('menu-entry-precocinado-field'),
     inMenuEntryPrecocinado: document.getElementById('in-menu-entry-precocinado'),
     menuEntryDescongeladosField: document.getElementById('menu-entry-descongelados-field'),
@@ -347,8 +371,60 @@ function getIngredientesReceta(recetaId) {
 // uno de los dos lo pida para considerar que la receta requiere precocinado.
 function recetaRequierePrecocinado(receta) {
     if (!receta) return false;
+    if (receta._tupperProductoId) return false; // entrada que usa un tupper ya hecho: nada que cocinar
     if (receta.requiere_cocinado !== false) return true;
     return getIngredientesReceta(receta.id).some(ing => ing.requiere_cocinado === true);
+}
+
+/* ==========================================================================
+   Tupper congelado de una receta (guisos): una entrada del menú puede "usar tupper" en vez
+   de cocinar la receta. Entonces no consume los ingredientes de la receta, sino 1 unidad del
+   producto-tupper por comensal, y no hay precocinado. Se resuelve con una "receta efectiva"
+   por entrada (getRecetaDeEntrada()): una copia de la receta sin precocinado y marcada con
+   _tupperProductoId, que getIngredientesEfectivos() convierte en "un solo ingrediente". Así
+   alertas, descongelado y lista de la compra lo respetan con el mismo código de siempre.
+   Ver DOCUMENTACIÓN-TECNICA.md §3 (recetas.producto_tupper_id, menu_semanal.usa_tupper).
+   ========================================================================== */
+
+// Producto que hace de "tupper" de la receta: el enlazado (recetas.producto_tupper_id) o, si
+// no lo hay, uno ya existente con su nombre + "congelado"/"tupper" (buscarProductoTupper(),
+// js/tuppers.js). null si no tiene.
+function getProductoTupper(receta) {
+    if (!receta) return null;
+    if (receta.producto_tupper_id) {
+        const producto = getProducto(receta.producto_tupper_id);
+        if (producto && producto.activa) return producto;
+    }
+    return buscarProductoTupper(receta);
+}
+
+// Receta "efectiva": con `usa` y un producto-tupper, la receta sin precocinado marcada con su
+// producto; en cualquier otro caso, la propia receta.
+function aplicarUsoTupper(receta, usa) {
+    if (!receta || !usa) return receta;
+    const producto = getProductoTupper(receta);
+    if (!producto) return receta;
+    return { ...receta, requiere_cocinado: false, tipo_precocinado: null, _tupperProductoId: producto.id };
+}
+
+// La receta de una entrada del menú tal y como hay que prepararla (con o sin tupper).
+function getRecetaDeEntrada(entrada) {
+    return aplicarUsoTupper(getReceta(entrada.recetaId), entrada.usa_tupper === true);
+}
+
+// Ingredientes que consume una receta efectiva, para `comensales_base` comensales: los suyos
+// o, si usa tupper, una unidad del producto-tupper por comensal base.
+function getIngredientesEfectivos(receta) {
+    if (receta._tupperProductoId) {
+        return [{ productoId: receta._tupperProductoId, cantidad: parseFloat(receta.comensales_base) || 1, requiere_cocinado: false }];
+    }
+    return getIngredientesReceta(receta.id);
+}
+
+// ¿Es este producto el tupper de alguna receta? Se hace en casa: no se compra (no sale en
+// "Compra X" ni en la lista de la compra).
+function esProductoTupper(productoId) {
+    return state.recetas.some(r => r.activa && String(getProductoTupper(r)?.id) === String(productoId));
 }
 
 // Tipo de precocinado del plato completo (§3): null si no lleva (receta de montar),
@@ -387,14 +463,14 @@ function getUsosDeProductoEnMenu(productoId) {
     return state.menuSemanal
         .filter(e => e.activa && e.fecha >= hoy)
         .map(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!receta) return null;
             // Suma TODAS las filas de receta_ingredientes de esa receta que sean este producto
             // (no solo la primera con .find()): si el producto está repetido como ingrediente
             // dentro de la misma receta, generarListaCompra() (js/lista-compra.js) ya suma
             // todas esas filas al calcular la necesidad real, así que este desglose tiene que
             // hacer lo mismo para que los números cuadren.
-            const cantidadIngrediente = getIngredientesReceta(receta.id)
+            const cantidadIngrediente = getIngredientesEfectivos(receta)
                 .filter(ing => String(ing.productoId) === String(productoId))
                 .reduce((sum, ing) => sum + (parseFloat(ing.cantidad) || 0), 0);
             if (cantidadIngrediente <= 0) return null;
@@ -414,7 +490,8 @@ function getUsosDeProductoEnMenu(productoId) {
 function productoEstaEnUso(productoId) {
     const enDespensa = state.despensa.some(l => l.activa && String(l.productoId) === String(productoId));
     const enRecetas = state.recetaIngredientes.some(ri => String(ri.productoId) === String(productoId));
-    return enDespensa || enRecetas;
+    const comoTupper = state.recetas.some(r => String(r.producto_tupper_id) === String(productoId));
+    return enDespensa || enRecetas || comoTupper;
 }
 
 // Suma la cantidad de todos los lotes activos de un producto: el stock disponible real,

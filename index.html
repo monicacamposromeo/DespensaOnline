@@ -436,6 +436,19 @@
                     </select>
                     <p class="config-hint"><strong>Fin de semana anterior</strong>: platos largos que dejas hechos el finde (lentejas, cocido…); te avisa desde el sábado anterior. <strong>Día anterior</strong>: platos que preparas la víspera para llevarte en tupper; te avisa la víspera (y, si algo está congelado, dos días antes para descongelarlo). <strong>No</strong>: recetas de montar; si algún ingrediente concreto necesita cocinarse aparte, márcalo en ese ingrediente más abajo y te lo recordará el mismo día.</p>
                 </div>
+                <div class="form-group hidden" id="receta-tupper-field">
+                    <label>Producto de los tuppers congelados (opcional)</label>
+                    <input type="hidden" id="in-receta-tupper-producto">
+                    <button type="button" class="item-row" id="btn-receta-tupper">
+                        <span class="item-main">
+                            <span class="item-name" id="receta-tupper-nombre"></span>
+                            <span class="item-meta" id="receta-tupper-meta"></span>
+                        </span>
+                        <span class="status-pill neutral">Cambiar</span>
+                    </button>
+                    <button type="button" class="text-btn hidden" id="btn-receta-tupper-quitar">Quitar enlace</button>
+                    <p class="config-hint">Al planificar esta receta en el menú podrás marcar "Usar tupper congelado": gastará 1 unidad de este producto por comensal, sin cocinar ni comprar los ingredientes. Se enlaza solo al apuntar los tuppers tras precocinar.</p>
+                </div>
                 <div class="form-group">
                     <label for="in-receta-instrucciones">Instrucciones (opcional)</label>
                     <textarea id="in-receta-instrucciones" class="form-input" rows="3"></textarea>
@@ -488,6 +501,13 @@
                     <label for="in-menu-entry-comensales">Comensales</label>
                     <input type="number" id="in-menu-entry-comensales" class="form-input" min="1" value="2">
                 </div>
+                <div class="form-group hidden" id="menu-entry-tupper-field">
+                    <label class="checkbox-field">
+                        <input type="checkbox" id="in-menu-entry-usa-tupper">
+                        Usar tupper congelado
+                    </label>
+                    <p class="config-hint" id="menu-entry-tupper-hint"></p>
+                </div>
                 <div class="form-group hidden" id="menu-entry-precocinado-field">
                     <label class="checkbox-field">
                         <input type="checkbox" id="in-menu-entry-precocinado">
@@ -536,6 +556,42 @@
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" id="btn-cancel-descongelar">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="btn-confirm-descongelar">Pasar a la Nevera</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: tuppers de un guiso recién precocinado (js/tuppers.js) -->
+    <div class="modal-backdrop hidden" id="modal-tuppers">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2>Tuppers del guiso</h2>
+                <button class="modal-close" id="btn-close-modal-tuppers" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <p id="tuppers-resumen" class="config-hint"></p>
+            <div class="form-group">
+                <label for="in-tuppers-nevera" id="in-tuppers-nevera-label">Tuppers a la nevera</label>
+                <input type="number" id="in-tuppers-nevera" class="form-input" min="0" step="1" value="0">
+            </div>
+            <div class="form-group">
+                <label for="in-tuppers-congelador" id="in-tuppers-congelador-label">Tuppers al congelador</label>
+                <input type="number" id="in-tuppers-congelador" class="form-input" min="0" step="1" value="0">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="in-tuppers-detalle">Dónde en el congelador (opcional)</label>
+                    <input type="text" id="in-tuppers-detalle" class="form-input" list="tuppers-detalles-list" placeholder="ej. Cajón 2">
+                    <datalist id="tuppers-detalles-list"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="in-tuppers-caducidad">Caducidad del congelado (opcional)</label>
+                    <input type="date" id="in-tuppers-caducidad" class="form-input">
+                </div>
+            </div>
+            <p id="tuppers-producto" class="config-hint"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="btn-cancel-tuppers">Ahora no</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-tuppers">Apuntar tuppers</button>
             </div>
         </div>
     </div>
@@ -617,6 +673,7 @@
     <script src="./js/lista-compra.js"></script>
     <script src="./js/alertas.js"></script>
     <script src="./js/descongelar.js"></script>
+    <script src="./js/tuppers.js"></script>
     <script src="./js/config.js"></script>
     <script src="./js/event-handler.js"></script>
     <script src="./app.js"></script>

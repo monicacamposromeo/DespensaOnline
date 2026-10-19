@@ -54,7 +54,7 @@ function inicioAvisoPrecocinado(receta, fecha) {
 // receta de montar, ya escalados por los comensales de esa entrada del menú.
 function getIngredientesACocinarTexto(receta, entrada) {
     const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
-    return getIngredientesReceta(receta.id)
+    return getIngredientesEfectivos(receta)
         .filter(ing => ing.requiere_cocinado === true)
         .map(ing => {
             const producto = getProducto(ing.productoId);
@@ -90,7 +90,7 @@ function getDescongeladosEntrada(entrada) {
 // (por si está repetido), escalada por comensales/comensales_base.
 function getCantidadEnEntrada(receta, entrada, productoId) {
     const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
-    return getIngredientesReceta(receta.id)
+    return getIngredientesEfectivos(receta)
         .filter(ing => String(ing.productoId) === String(productoId))
         .reduce((sum, ing) => sum + (parseFloat(ing.cantidad) || 0) * factor, 0);
 }
@@ -128,7 +128,7 @@ function getCantidadADescongelar(receta, entrada, productoId, hoy = todayISO()) 
 function getProductosADescongelar(receta, entrada, hoy = todayISO()) {
     const yaDescongelados = getDescongeladosEntrada(entrada);
     const vistos = new Set();
-    return getIngredientesReceta(receta.id)
+    return getIngredientesEfectivos(receta)
         .map(ing => getProducto(ing.productoId))
         .filter(producto => {
             if (!producto || vistos.has(String(producto.id)) || yaDescongelados.includes(String(producto.id))) return false;
@@ -162,7 +162,7 @@ function getPendientesDescongelarParaPrecocinar(receta, entrada, hoy = todayISO(
 function getFaltantesParaPrecocinar(receta, entrada, hoy) {
     const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
     const necesidades = {};
-    getIngredientesReceta(receta.id).forEach(ing => {
+    getIngredientesEfectivos(receta).forEach(ing => {
         necesidades[ing.productoId] = (necesidades[ing.productoId] || 0) + (parseFloat(ing.cantidad) || 0) * factor;
     });
     return Object.entries(necesidades)
@@ -181,10 +181,10 @@ function getNecesidadesDelDia(fecha) {
     state.menuSemanal
         .filter(e => e.activa && e.fecha === fecha)
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!receta) return;
             const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
-            getIngredientesReceta(receta.id).forEach(ing => {
+            getIngredientesEfectivos(receta).forEach(ing => {
                 const cantidad = (parseFloat(ing.cantidad) || 0) * factor;
                 necesidades[ing.productoId] = (necesidades[ing.productoId] || 0) + cantidad;
             });
@@ -244,7 +244,7 @@ function getAlertas(hoy = todayISO()) {
         const faltante = round2(necesaria - getStockProyectado(productoId, hoy));
         if (faltante <= 0) return;
         const producto = getProducto(productoId);
-        if (!producto) return;
+        if (!producto || esProductoTupper(productoId)) return; // un tupper se hace en casa, no se compra
         alertas.push({
             tipo: 'comprar',
             prioridad: 0,
@@ -289,7 +289,7 @@ function getAlertas(hoy = todayISO()) {
     state.menuSemanal
         .filter(e => e.activa && e.fecha >= hoy && hoy >= addDaysToISO(e.fecha, -1))
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!receta || esPrecocinadoDeRecetaCompleta(receta)) return;
             const comida = TIPO_COMIDA_LABELS[entrada.tipo_comida] || entrada.tipo_comida;
             getProductosADescongelar(receta, entrada, hoy).forEach(producto => alertas.push({
@@ -312,7 +312,7 @@ function getAlertas(hoy = todayISO()) {
     state.menuSemanal
         .filter(e => e.activa && !e.precocinado && hoy === addDaysToISO(e.fecha, -2))
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!esTupper(receta)) return;
             getProductosADescongelar(receta, entrada, hoy).forEach(producto => alertas.push({
                 tipo: 'descongelar',
@@ -340,7 +340,7 @@ function getAlertas(hoy = todayISO()) {
     state.menuSemanal
         .filter(e => e.activa && e.fecha > hoy && !e.precocinado)
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!esPrecocinadoDeRecetaCompleta(receta)) return;
             if (hoy < inicioAvisoPrecocinado(receta, entrada.fecha)) return;
 
@@ -376,7 +376,7 @@ function getAlertas(hoy = todayISO()) {
     state.menuSemanal
         .filter(e => e.activa && e.fecha === hoy && !e.precocinado)
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!receta || !recetaRequierePrecocinado(receta)) return;
 
             const comida = TIPO_COMIDA_LABELS[entrada.tipo_comida] || entrada.tipo_comida;
@@ -522,6 +522,7 @@ async function marcarPrecocinado(entradaId) {
     showToast('Marcado como precocinado', 'success');
     renderMenuSemanal(); // repinta el menú y, vía renderAlertasBadge(), Próximas alertas
     if (!DOM.modalAlertas.classList.contains('hidden')) openAlertasModal();
+    abrirModalTuppers(entradaId); // solo si es un guiso de fin de semana (js/tuppers.js)
 }
 
 // Delegación de clics para los botones "Ya precocinado" / "Ya descongelado" de una lista de

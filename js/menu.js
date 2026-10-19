@@ -200,6 +200,8 @@ function mostrarMenuEntryModal(fecha, tipoComida, entrada, recetaIdInicial) {
     DOM.inMenuEntryReceta.value = entrada ? entrada.recetaId : recetaIdInicial;
     actualizarRecetaElegidaMenuEntry();
     DOM.inMenuEntryComensales.value = entrada ? entrada.comensales : (getReceta(DOM.inMenuEntryReceta.value)?.comensales_base || 2);
+    DOM.inMenuEntryUsaTupper.checked = !!(entrada && entrada.usa_tupper);
+    actualizarTupperMenuEntry();
     DOM.inMenuEntryPrecocinado.checked = !!(entrada && entrada.precocinado);
     updateMenuEntryPrecocinadoVisibility();
     renderMenuEntryDescongelados();
@@ -213,13 +215,17 @@ function mostrarMenuEntryModal(fecha, tipoComida, entrada, recetaIdInicial) {
 // de receta en el modal, las marcas anteriores no valen y salen todas desmarcadas.
 function renderMenuEntryDescongelados() {
     const entrada = state.menuSemanal.find(m => m.id == state.editingMenuEntry);
-    const receta = getReceta(DOM.inMenuEntryReceta.value);
-    const mismaReceta = entrada && receta && String(entrada.recetaId) === String(receta.id);
+    // Receta tal y como se va a preparar según el formulario (con o sin tupper): con tupper,
+    // el único "ingrediente" es el producto-tupper.
+    const receta = aplicarUsoTupper(getReceta(DOM.inMenuEntryReceta.value), tupperMarcadoEnFormulario());
+    // Las marcas guardadas solo valen si no cambió ni la receta ni el uso del tupper.
+    const mismaReceta = entrada && receta && String(entrada.recetaId) === String(receta.id)
+        && !!entrada.usa_tupper === !!receta._tupperProductoId;
     const marcados = mismaReceta ? getDescongeladosEntrada(entrada) : [];
 
     const vistos = new Set();
     const candidatos = entrada && receta
-        ? getIngredientesReceta(receta.id)
+        ? getIngredientesEfectivos(receta)
             .map(ing => getProducto(ing.productoId))
             .filter(p => {
                 if (!p || vistos.has(String(p.id))) return false;
@@ -239,13 +245,46 @@ function renderMenuEntryDescongelados() {
 
 // "Ya lo he precocinado" solo tiene sentido al editar un plato ya planificado cuya receta
 // requiera precocinado (recetaRequierePrecocinado(), js/state.js).
+// Con "Usar tupper congelado" marcado no hay nada que precocinar.
 function updateMenuEntryPrecocinadoVisibility() {
-    const visible = !!state.editingMenuEntry && recetaRequierePrecocinado(getReceta(DOM.inMenuEntryReceta.value));
+    const receta = aplicarUsoTupper(getReceta(DOM.inMenuEntryReceta.value), tupperMarcadoEnFormulario());
+    const visible = !!state.editingMenuEntry && recetaRequierePrecocinado(receta);
     DOM.menuEntryPrecocinadoField.classList.toggle('hidden', !visible);
 }
 
-// Texto "· precocinado" junto al plato en la rejilla/agenda cuando ya se marcó.
+// ¿Está marcada (y visible) la casilla "Usar tupper congelado" del formulario?
+function tupperMarcadoEnFormulario() {
+    return !DOM.menuEntryTupperField.classList.contains('hidden') && DOM.inMenuEntryUsaTupper.checked;
+}
+
+// La casilla solo aparece si la receta tiene producto-tupper (enlazado en la receta o ya
+// existente con su nombre + "congelado"/"tupper"). El aviso dice cuántos tuppers hay, y si
+// la casilla está marcada y no llegan para los comensales, cuántos faltan.
+function actualizarTupperMenuEntry() {
+    const receta = getReceta(DOM.inMenuEntryReceta.value);
+    const producto = receta && getProductoTupper(receta);
+    DOM.menuEntryTupperField.classList.toggle('hidden', !producto);
+    if (!producto) {
+        DOM.inMenuEntryUsaTupper.checked = false;
+        DOM.menuEntryTupperHint.textContent = '';
+        return;
+    }
+    const total = getStockDisponible(producto.id);
+    const congelados = getLotesCongelados(producto.id).reduce((s, l) => s + (parseFloat(l.cantidad) || 0), 0);
+    const comensales = parseFloat(DOM.inMenuEntryComensales.value) || 0;
+    let texto = total > 0
+        ? `Tienes ${round2(total)} tupper${total === 1 ? '' : 's'} de «${producto.nombre}»${congelados > 0 ? ` (${round2(congelados)} en el congelador)` : ''}.`
+        : `No tienes ningún tupper de «${producto.nombre}» apuntado.`;
+    if (DOM.inMenuEntryUsaTupper.checked) {
+        texto += ' Se gasta 1 por comensal y no hay que cocinar ni comprar nada.';
+        if (total < comensales) texto += ` Te faltan ${round2(comensales - total)} para ${comensales} comensales.`;
+    }
+    DOM.menuEntryTupperHint.textContent = texto;
+}
+
+// Texto "· precocinado" (o "· tupper congelado") junto al plato en la rejilla/agenda.
 function precocinadoSufijo(entrada, receta) {
+    if (entrada.usa_tupper === true && getProductoTupper(receta)) return ' · tupper congelado';
     return entrada.precocinado && recetaRequierePrecocinado(receta) ? ' · precocinado' : '';
 }
 
@@ -263,17 +302,25 @@ async function handleMenuEntryFormSubmit(e) {
         comensales: DOM.inMenuEntryComensales.value
     };
     const entradaId = state.editingMenuEntry;
+    const entradaActual = entradaId ? state.menuSemanal.find(m => m.id == entradaId) : null;
+    // Solo se envía si se usa (o se estaba usando): así, si nunca se usa, no hace falta que
+    // exista la columna menu_semanal.usa_tupper en la base de datos.
+    const usaTupper = tupperMarcadoEnFormulario();
+    if (usaTupper || (entradaActual && entradaActual.usa_tupper)) payload.usa_tupper = usaTupper;
     let nuevosDescongelados = [];
+    let recienPrecocinado = false;
     if (entradaId) {
         // Si la casilla no se ve (la receta nueva no requiere precocinado) y la entrada estaba
         // marcada, se desmarca: la marca era de la receta anterior.
         const entrada = state.menuSemanal.find(m => m.id == entradaId);
         if (!DOM.menuEntryPrecocinadoField.classList.contains('hidden')) payload.precocinado = DOM.inMenuEntryPrecocinado.checked;
         else if (entrada && entrada.precocinado) payload.precocinado = false;
+        recienPrecocinado = payload.precocinado === true && !(entrada && entrada.precocinado);
 
         // Descongelados: lo que quede marcado en las casillas (se puede desmarcar). Los recién
         // marcados, además, abren tras guardar la ventana de paquetes (abrirModalDescongelar()).
-        const mismaReceta = entrada && String(entrada.recetaId) === String(payload.recetaId);
+        const mismaReceta = entrada && String(entrada.recetaId) === String(payload.recetaId)
+            && !!entrada.usa_tupper === usaTupper; // al cambiar de receta o de tupper, las marcas no valen
         const antes = entrada && mismaReceta ? getDescongeladosEntrada(entrada) : [];
         const marcados = [...DOM.menuEntryDescongeladosList.querySelectorAll('[data-descongelado-check]:checked')].map(cb => cb.value);
         if (!DOM.menuEntryDescongeladosField.classList.contains('hidden')) payload.descongelados = marcados;
@@ -291,6 +338,8 @@ async function handleMenuEntryFormSubmit(e) {
         renderMenuSemanal();
         // Los recién marcados ya están guardados; falta elegir qué paquetes salen del congelador.
         if (nuevosDescongelados.length > 0) abrirModalDescongelar(entradaId, nuevosDescongelados, { yaGuardado: true });
+        // Guiso de fin de semana recién marcado como precocinado: apuntar sus tuppers (js/tuppers.js).
+        if (recienPrecocinado) abrirModalTuppers(entradaId);
     } else {
         showToast(result?.error || 'Error al guardar', 'error');
     }

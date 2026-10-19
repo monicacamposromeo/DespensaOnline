@@ -41,10 +41,11 @@ async function generarListaCompra(fechaInicio, fechaFin) {
     state.menuSemanal
         .filter(e => e.activa && e.fecha >= fechaInicio && (!fechaFin || e.fecha <= fechaFin))
         .forEach(entrada => {
-            const receta = getReceta(entrada.recetaId);
+            const receta = getRecetaDeEntrada(entrada);
             if (!receta) return;
             const factor = (parseFloat(entrada.comensales) || 1) / (parseFloat(receta.comensales_base) || 1);
-            getIngredientesReceta(receta.id).forEach(ing => {
+            getIngredientesEfectivos(receta).forEach(ing => {
+                if (esProductoTupper(ing.productoId)) return; // un tupper se hace en casa, no se compra
                 const cantidad = (parseFloat(ing.cantidad) || 0) * factor;
                 necesidades[ing.productoId] = (necesidades[ing.productoId] || 0) + cantidad;
             });

@@ -74,8 +74,9 @@ Siete entidades planas (más la tabla auxiliar `ajustes`). Las cantidades de un 
 
 ### `recetas`
 ```
-{ id, nombre, categoria, tiempo_preparacion_min, comensales_base, requiere_cocinado, tipo_precocinado, instrucciones, activa }
+{ id, nombre, categoria, tiempo_preparacion_min, comensales_base, requiere_cocinado, tipo_precocinado, producto_tupper_id, instrucciones, activa }
 ```
+- `producto_tupper_id`: opcional (FK a `productos`). Producto que representa los **tuppers ya hechos** del plato (1 unidad = 1 ración = 1 comensal), pensado para guisos de fin de semana. Se enlaza solo al apuntar los tuppers tras marcar "Ya precocinado" (`js/tuppers.js`) o a mano en el formulario de receta. Sin enlace explícito, `getProductoTupper()` (`js/state.js`) usa un producto activo con el nombre de la receta + "congelado"/"tupper" (con o sin paréntesis). Permite que una entrada del menú use `menu_semanal.usa_tupper` (más abajo).
 - `tipo_precocinado`: texto opcional, solo con sentido si `requiere_cocinado` es `true`: `'fin_de_semana'` (guisos y potajes que se dejan hechos el fin de semana anterior) o `'dia_anterior'` (platos que se preparan la víspera para llevarlos en tupper al trabajo). En el formulario de receta, `requiere_cocinado` + `tipo_precocinado` son un único desplegable "Precocinado del plato completo: No / Fin de semana anterior / Día anterior". `getTipoPrecocinado()` (`js/state.js`) devuelve `null`, `'fin_de_semana'` o `'dia_anterior'`; una receta antigua sin la columna rellena que requiera precocinado cuenta como `'fin_de_semana'`, que era el único tipo que había. Qué avisos genera cada tipo: §9.
 - `categoria` ∈ `desayuno | comida | cena | postre | snack` (texto libre, igual que en `productos`).
 - `comensales_base`: número de comensales para el que están pensadas las cantidades de `receta_ingredientes`; es la base de escalado al planificar el menú (§5).
@@ -92,8 +93,9 @@ Siete entidades planas (más la tabla auxiliar `ajustes`). Las cantidades de un 
 
 ### `menu_semanal`
 ```
-{ id, fecha, tipo_comida, recetaId, comensales, precocinado, descongelados, activa }
+{ id, fecha, tipo_comida, recetaId, comensales, precocinado, usa_tupper, descongelados, activa }
 ```
+- `usa_tupper`: booleano (por defecto `false`). El plato se sirve con **tuppers ya hechos** (`recetas.producto_tupper_id`) en vez de cocinarse: la entrada consume 1 unidad del producto-tupper por comensal en lugar de los ingredientes de la receta, no hay precocinado ("Precocina con tiempo", "Hoy toca cocinar") y, si el tupper está en el congelador, sale la alerta normal de "Descongela" la víspera. Se implementa con una "receta efectiva" por entrada (`getRecetaDeEntrada()` + `getIngredientesEfectivos()`, `js/state.js`), que usan `getAlertas()`, `generarListaCompra()` y el descongelado. Los productos-tupper no salen en "Compra X" ni en la lista de la compra (`esProductoTupper()`: se hacen en casa).
 - `descongelados`: array de `productoId` (por defecto `[]`) con los ingredientes de ese plato ya marcados "Ya descongelado". Mientras un ingrediente congelado no esté aquí, la alerta "Descongela" de ese plato se repite cada día (§9). Se marca con el botón "Ya descongelado" de la alerta o con las casillas "Ingredientes congelados" del modal del hueco del menú; al marcarlo se abre la ventana "¿Qué sacas del congelador?" (`abrirModalDescongelar()`, `js/descongelar.js`) para pasar a la Nevera los paquetes que salen (§9). Si se cambia la receta del plato, se vacía.
 - `precocinado`: booleano (por defecto `false`). Marca "Ya lo he precocinado" de ese plato concreto: mientras sea `false`, en una receta de precocinado completo la alerta "Precocina con tiempo" (con su "Antes descongela") se repite cada día desde el sábado anterior (§9); al marcarlo deja de salir, igual que "Cocinar hoy" (que para un ingrediente suelto es su único aviso). Se marca con el botón "Ya precocinado" de la propia alerta o con la casilla del modal del hueco del menú (solo visible al editar un plato cuya receta requiera precocinado). Si se cambia la receta del plato, la marca se resetea.
 - Una fila por **plato** asignado a un hueco de menú (fecha concreta + `tipo_comida`). No hay restricción de unicidad por `fecha + tipo_comida`: puede haber varias filas para el mismo hueco (varios comensales comiendo cosas distintas, o primer y segundo plato) — todo el código que agrega por día (`generarListaCompra()` §5, `getAlertas()` §9) ya recorre todas las entradas con `.filter()`, no da por hecho que haya una sola.
@@ -178,6 +180,7 @@ create table receta_ingredientes (
 -- alter table recetas add column requiere_cocinado boolean not null default true;
 -- alter table receta_ingredientes add column requiere_cocinado boolean not null default false;
 -- alter table recetas add column tipo_precocinado text;
+-- alter table recetas add column producto_tupper_id bigint references productos(id);
 
 create table menu_semanal (
   id bigint generated always as identity primary key,
@@ -193,6 +196,7 @@ create table menu_semanal (
 -- Si ya tenías la tabla creada de antes:
 -- alter table menu_semanal add column precocinado boolean not null default false;
 -- alter table menu_semanal add column descongelados jsonb not null default '[]'::jsonb;
+-- alter table menu_semanal add column usa_tupper boolean not null default false;
 
 create table lista_compra (
   id bigint generated always as identity primary key,

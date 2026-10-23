@@ -11,6 +11,7 @@ function validateLocalJSON(data) {
     if (!Array.isArray(data.recetaIngredientes)) data.recetaIngredientes = [];
     if (!Array.isArray(data.menuSemanal)) data.menuSemanal = [];
     if (!Array.isArray(data.listaCompra)) data.listaCompra = [];
+    if (!Array.isArray(data.notasMenu)) data.notasMenu = [];
     return true;
 }
 
@@ -69,6 +70,7 @@ function handleLocalFileSelected(file) {
                 state.menuSemanal = data.menuSemanal || [];
                 state.listaCompra = data.listaCompra || [];
                 state.ajustes = data.ajustes || {};
+                state.notasMenu = data.notasMenu || [];
                 saveLocalCache();
                 showAppInterface();
                 updateLocalModeUI();
@@ -95,6 +97,7 @@ function loadDefaultLocalStructure() {
     state.menuSemanal = [];
     state.listaCompra = [];
     state.ajustes = {};
+    state.notasMenu = [];
 }
 
 function createNewLocalDB() {
@@ -121,7 +124,8 @@ function saveLocalCache() {
         recetaIngredientes: state.recetaIngredientes,
         menuSemanal: state.menuSemanal,
         listaCompra: state.listaCompra,
-        ajustes: state.ajustes
+        ajustes: state.ajustes,
+        notasMenu: state.notasMenu
     }));
 }
 
@@ -177,7 +181,8 @@ function downloadLocalDB() {
         recetaIngredientes: state.recetaIngredientes,
         menuSemanal: state.menuSemanal,
         listaCompra: state.listaCompra,
-        ajustes: state.ajustes
+        ajustes: state.ajustes,
+        notasMenu: state.notasMenu
     };
     const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -216,6 +221,7 @@ function checkLocalCache() {
                     state.menuSemanal = data.menuSemanal || [];
                     state.listaCompra = data.listaCompra || [];
                     state.ajustes = data.ajustes || {};
+                    state.notasMenu = data.notasMenu || [];
 
                     showAppInterface();
                     updateLocalModeUI();
@@ -299,6 +305,7 @@ function loadDemoData() {
     ];
 
     state.ajustes = {};
+    state.notasMenu = [];
 
     renderAllScreens();
 }
@@ -488,6 +495,19 @@ function applyWriteAction(action, data, persist) {
             state.listaCompra = state.listaCompra.filter(item => item.id != data.id);
             commit();
             return { success: true, message: 'Producto quitado de la lista' };
+        }
+
+        case 'nota_menu': {
+            const existente = state.notasMenu.find(n => n.fecha === data.fecha);
+            if (existente) existente.texto = data.texto;
+            else state.notasMenu.push({ fecha: data.fecha, texto: data.texto });
+            commit();
+            return { success: true, message: 'Nota guardada' };
+        }
+        case 'eliminar_nota_menu': {
+            state.notasMenu = state.notasMenu.filter(n => n.fecha !== data.fecha);
+            commit();
+            return { success: true, message: 'Nota borrada' };
         }
 
         case 'ajuste': {

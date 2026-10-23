@@ -529,6 +529,28 @@
         </div>
     </div>
 
+    <!-- Modal: nota de un día del menú (js/menu.js; se guarda en la tabla `ajustes`) -->
+    <div class="modal-backdrop hidden" id="modal-nota-dia">
+        <div class="modal">
+            <div class="sheet-handle"></div>
+            <div class="modal-header">
+                <h2 id="modal-nota-dia-title">Nota del día</h2>
+                <button class="modal-close" id="btn-close-modal-nota-dia" aria-label="Cerrar"><svg class="icon-sm"><use href="#ic-x"/></svg></button>
+            </div>
+            <form id="form-nota-dia">
+                <div class="form-group">
+                    <label for="in-nota-dia">Nota</label>
+                    <textarea id="in-nota-dia" class="form-input" rows="3" maxlength="200" placeholder="Ej.: Fuera todo el día · No cenamos en casa"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger hidden" id="btn-delete-nota-dia">Borrar nota</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-nota-dia">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: alertas -->
     <div class="modal-backdrop hidden" id="modal-alertas">
         <div class="modal">

@@ -15,7 +15,9 @@ function renderMenuSemanal() {
     html += '<div class="menu-grid-corner"></div>';
     dias.forEach((fecha, i) => {
         const claseHoy = fecha === hoy ? ' today' : '';
-        html += `<div class="menu-grid-day-header${claseHoy}">${DIAS_SEMANA_LABELS[i]}<br><span class="menu-grid-day-date">${formatDate(fecha)}</span></div>`;
+        const nota = getNotaDia(fecha);
+        html += `<div class="menu-grid-day-header${claseHoy}">${DIAS_SEMANA_LABELS[i]}<br><span class="menu-grid-day-date">${formatDate(fecha)}</span>
+            <button type="button" class="menu-nota-btn${nota ? ' has-nota' : ''}" data-nota-fecha="${fecha}" title="${escapeHtml(nota || 'Añadir nota')}">${nota ? escapeHtml(nota) : '+ Nota'}</button></div>`;
     });
 
     TIPOS_COMIDA.forEach(tipo => {
@@ -30,6 +32,9 @@ function renderMenuSemanal() {
 
     DOM.menuGrid.querySelectorAll('[data-menu-add]').forEach(btn => {
         btn.addEventListener('click', () => openMenuEntryModal(btn.dataset.fecha, btn.dataset.tipo, null));
+    });
+    DOM.menuGrid.querySelectorAll('[data-nota-fecha]').forEach(btn => {
+        btn.addEventListener('click', () => openNotaDiaModal(btn.dataset.notaFecha));
     });
     DOM.menuGrid.querySelectorAll('[data-entrada-id]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -76,7 +81,7 @@ function renderDayStrip() {
 
     DOM.menuDaystrip.innerHTML = dias.map((fecha, i) => {
         const dia = parseInt(fecha.split('-')[2], 10);
-        const clases = ['daychip', fecha === hoy ? 'today' : '', fecha === state.selectedDayISO ? 'active' : ''].filter(Boolean).join(' ');
+        const clases = ['daychip', fecha === hoy ? 'today' : '', fecha === state.selectedDayISO ? 'active' : '', getNotaDia(fecha) ? 'has-nota' : ''].filter(Boolean).join(' ');
         return `<button type="button" class="${clases}" data-fecha="${fecha}">
             <span class="dow">${DIAS_SEMANA_LABELS[i].slice(0, 3)}</span><span class="num">${dia}</span>
         </button>`;
@@ -95,7 +100,12 @@ function renderDayStrip() {
 // día (puede haber varios) y un enlace para añadir otro más al mismo hueco.
 function renderAgendaDia() {
     const fecha = state.selectedDayISO;
-    DOM.menuAgenda.innerHTML = TIPOS_COMIDA.map(tipo => {
+    const nota = getNotaDia(fecha);
+    const notaHtml = `<button type="button" class="meal-row nota-row${nota ? ' has-nota' : ''}" data-nota-fecha="${fecha}">
+            <span class="meal-value${nota ? '' : ' empty'}">${nota ? escapeHtml(nota) : 'Añadir nota del día'}</span>
+            <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
+        </button>`;
+    DOM.menuAgenda.innerHTML = notaHtml + TIPOS_COMIDA.map(tipo => {
         const entradas = state.menuSemanal.filter(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
 
         const platos = entradas.length > 0
@@ -118,6 +128,9 @@ function renderAgendaDia() {
         return `<h3 class="section-subtitle">${TIPO_COMIDA_LABELS[tipo]}</h3>${platos}${addMas}`;
     }).join('');
 
+    DOM.menuAgenda.querySelectorAll('[data-nota-fecha]').forEach(row => {
+        row.addEventListener('click', () => openNotaDiaModal(row.dataset.notaFecha));
+    });
     DOM.menuAgenda.querySelectorAll('[data-entrada-id]').forEach(row => {
         row.addEventListener('click', () => {
             const entrada = state.menuSemanal.find(m => String(m.id) === row.dataset.entradaId);
@@ -353,6 +366,55 @@ async function handleDeleteMenuEntry() {
         closeMenuEntryModal();
         renderMenuSemanal();
     }
+}
+
+/* ==========================================================================
+   Notas por día ("fuera todo el día", "no cenamos en casa"...): tabla `notas_menu`
+   (fecha PK, texto), en state.notasMenu. Ver DOCUMENTACIÓN-TECNICA.md §3.
+   ========================================================================== */
+function getNotaDia(fecha) {
+    const nota = state.notasMenu.find(n => n.fecha === fecha);
+    return nota ? nota.texto.trim() : '';
+}
+
+function openNotaDiaModal(fecha) {
+    const nota = getNotaDia(fecha);
+    state.editingNotaFecha = fecha;
+    DOM.modalNotaDiaTitle.textContent = `Nota · ${formatDate(fecha)}`;
+    DOM.inNotaDia.value = nota;
+    DOM.btnDeleteNotaDia.classList.toggle('hidden', !nota);
+    DOM.modalNotaDia.classList.remove('hidden');
+    DOM.inNotaDia.focus();
+}
+
+function closeNotaDiaModal() {
+    DOM.modalNotaDia.classList.add('hidden');
+    state.editingNotaFecha = null;
+}
+
+async function guardarNotaDia(texto, mensaje) {
+    const fecha = state.editingNotaFecha;
+    if (!fecha) return;
+    const result = texto
+        ? await apiRequest('nota_menu', 'POST', { fecha, texto })
+        : await apiRequest('eliminar_nota_menu', 'DELETE', { fecha });
+    if (result && result.success) {
+        closeNotaDiaModal();
+        showToast(mensaje, 'success');
+        renderMenuSemanal();
+    } else {
+        showToast(result?.error || 'No se pudo guardar la nota (¿falta la tabla "notas_menu" en Supabase?)', 'error');
+    }
+}
+
+function handleNotaDiaSubmit(e) {
+    e.preventDefault();
+    const texto = DOM.inNotaDia.value.trim();
+    return guardarNotaDia(texto, texto ? 'Nota guardada' : 'Nota borrada');
+}
+
+function handleDeleteNotaDia() {
+    return guardarNotaDia('', 'Nota borrada');
 }
 
 function goToWeek(offsetWeeks) {

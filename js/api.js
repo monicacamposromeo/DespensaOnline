@@ -117,6 +117,7 @@ async function loadSupabaseData() {
     state.menuSemanal = menuSemanal || [];
     state.listaCompra = listaCompra || [];
     state.ajustes = await cargarAjustesSupabase();
+    state.notasMenu = await cargarNotasMenuSupabase();
 }
 
 // Tabla `ajustes` (clave text PK, valor jsonb) → { clave: valor }. Si la tabla aún no
@@ -131,11 +132,22 @@ async function cargarAjustesSupabase() {
     }
 }
 
+// Tabla `notas_menu` (fecha PK, texto). Como `ajustes`, si aún no existe (no se ha ejecutado
+// su SQL) la app sigue funcionando, solo que sin notas.
+async function cargarNotasMenuSupabase() {
+    try {
+        return await supabaseFetch('notas_menu?select=fecha,texto&order=fecha.asc') || [];
+    } catch (err) {
+        console.warn('No se pudieron cargar las notas del menú (¿falta la tabla "notas_menu"?)', err);
+        return [];
+    }
+}
+
 /* ==========================================================================
    Realtime: mantiene sincronizadas varias pestañas/dispositivos a la vez
    (ver ARQUITECTURA-PLANTILLA.md §4.3-4.4: debounce 300ms, un canal, varias tablas)
    ========================================================================== */
-const REALTIME_TABLAS = ['despensa', 'ubicaciones', 'menu_semanal', 'lista_compra', 'ajustes'];
+const REALTIME_TABLAS = ['despensa', 'ubicaciones', 'menu_semanal', 'lista_compra', 'ajustes', 'notas_menu'];
 let supabaseRealtimeTimers = {};
 
 function initSupabaseRealtime() {
@@ -178,6 +190,10 @@ async function refreshSupabaseTable(tabla) {
             case 'lista_compra':
                 state.listaCompra = await supabaseFetch('lista_compra?order=id.asc') || [];
                 renderListaCompra();
+                break;
+            case 'notas_menu':
+                state.notasMenu = await cargarNotasMenuSupabase();
+                renderMenuSemanal();
                 break;
             case 'ajustes':
                 state.ajustes = await cargarAjustesSupabase();
@@ -392,6 +408,24 @@ async function handleSupabaseWriteAction(action, method, data) {
                 await supabaseFetch(`lista_compra?id=eq.${data.id}`, { method: 'DELETE' });
                 state.listaCompra = state.listaCompra.filter(item => item.id != data.id);
                 return { success: true, message: 'Producto quitado de la lista' };
+            }
+
+            case 'nota_menu': {
+                // Upsert por fecha: una nota por día.
+                await supabaseFetch('notas_menu?on_conflict=fecha', {
+                    method: 'POST',
+                    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+                    body: JSON.stringify({ fecha: data.fecha, texto: data.texto })
+                });
+                const existente = state.notasMenu.find(n => n.fecha === data.fecha);
+                if (existente) existente.texto = data.texto;
+                else state.notasMenu.push({ fecha: data.fecha, texto: data.texto });
+                return { success: true, message: 'Nota guardada' };
+            }
+            case 'eliminar_nota_menu': {
+                await supabaseFetch(`notas_menu?fecha=eq.${data.fecha}`, { method: 'DELETE' });
+                state.notasMenu = state.notasMenu.filter(n => n.fecha !== data.fecha);
+                return { success: true, message: 'Nota borrada' };
             }
 
             case 'ajuste': {

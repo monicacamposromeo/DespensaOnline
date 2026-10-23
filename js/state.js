@@ -28,6 +28,8 @@ const state = {
     recetaIngredientes: [],
     menuSemanal: [],
     listaCompra: [],
+    // Notas por día del menú [{ fecha, texto }] (tabla `notas_menu` en Supabase). Ver getNotaDia().
+    notasMenu: [],
     // Ajustes de la app compartidos entre dispositivos (tabla `ajustes` en Supabase, o dentro
     // del archivo de datos en modo Local): { clave: valor }. Ver llevoTupper().
     ajustes: {},
@@ -35,6 +37,7 @@ const state = {
     editingLoteId: null,
     editingRecetaId: null,
     editingMenuEntry: null,
+    editingNotaFecha: null,
     editingProductoId: null,
     editingLoteGrupoPrefill: null,
 
@@ -272,7 +275,15 @@ const DOM = {
     menuEntryDescongeladosField: document.getElementById('menu-entry-descongelados-field'),
     menuEntryDescongeladosList: document.getElementById('menu-entry-descongelados-list'),
     btnDeleteMenuEntry: document.getElementById('btn-delete-menu-entry'),
-    btnCancelMenuEntry: document.getElementById('btn-cancel-menu-entry')
+    btnCancelMenuEntry: document.getElementById('btn-cancel-menu-entry'),
+
+    modalNotaDia: document.getElementById('modal-nota-dia'),
+    modalNotaDiaTitle: document.getElementById('modal-nota-dia-title'),
+    btnCloseModalNotaDia: document.getElementById('btn-close-modal-nota-dia'),
+    formNotaDia: document.getElementById('form-nota-dia'),
+    inNotaDia: document.getElementById('in-nota-dia'),
+    btnDeleteNotaDia: document.getElementById('btn-delete-nota-dia'),
+    btnCancelNotaDia: document.getElementById('btn-cancel-nota-dia')
 };
 
 /* ==========================================================================

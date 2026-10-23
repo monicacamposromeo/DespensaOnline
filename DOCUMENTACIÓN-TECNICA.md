@@ -207,7 +207,13 @@ create table lista_compra (
   fecha_creacion timestamptz not null default now()
 );
 
--- Single-user: RLS desactivada o políticas USING (true) en las siete tablas
+-- Notas por día del menú ("fuera todo el día"...): una fila por fecha.
+create table notas_menu (
+  fecha date primary key,
+  texto text not null
+);
+
+-- Single-user: RLS desactivada o políticas USING (true) en las ocho tablas
 -- (ver ARQUITECTURA-PLANTILLA.md §4.2).
 -- Ajustes compartidos entre dispositivos (p. ej. llevo_tupper): una fila por ajuste.
 create table ajustes (
@@ -215,8 +221,8 @@ create table ajustes (
   valor jsonb
 );
 
-alter publication supabase_realtime add table despensa, ubicaciones, menu_semanal, lista_compra, ajustes;
--- Si ya tenías la publicación creada de antes: alter publication supabase_realtime add table ajustes;
+alter publication supabase_realtime add table despensa, ubicaciones, menu_semanal, lista_compra, ajustes, notas_menu;
+-- Si ya tenías la publicación creada de antes: alter publication supabase_realtime add table ajustes, notas_menu;
 ```
 
 ## 4. Estado global y caché de DOM (`js/state.js`)

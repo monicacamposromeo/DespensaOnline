@@ -182,6 +182,10 @@ function initMenuActions() {
     DOM.btnCancelMenuEntry.addEventListener('click', closeMenuEntryModal);
     DOM.formMenuEntry.addEventListener('submit', handleMenuEntryFormSubmit);
     DOM.btnDeleteMenuEntry.addEventListener('click', handleDeleteMenuEntry);
+    DOM.btnCloseModalNotaDia.addEventListener('click', closeNotaDiaModal);
+    DOM.btnCancelNotaDia.addEventListener('click', closeNotaDiaModal);
+    DOM.formNotaDia.addEventListener('submit', handleNotaDiaSubmit);
+    DOM.btnDeleteNotaDia.addEventListener('click', handleDeleteNotaDia);
     DOM.btnMenuEntryReceta.addEventListener('click', handleCambiarRecetaMenuEntry);
     DOM.inMenuEntryUsaTupper.addEventListener('change', () => {
         actualizarTupperMenuEntry();

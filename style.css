@@ -434,6 +434,14 @@ textarea.form-input { resize: vertical; font-family: inherit; }
 .nota-row { background: transparent; border-style: dashed; }
 .nota-row.has-nota { background: var(--warning-light); border-style: solid; border-color: var(--warning); }
 .meal-add-mas { display: block; margin: -2px 0 12px 4px; font-size: 0.82rem; }
+.meal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 12px 0 6px; }
+.meal-head .section-subtitle { margin: 0; }
+.meal-nota-add { font-size: 0.75rem; opacity: 0.8; }
+.meal-row.meal-nota {
+    padding: 11px 15px; border-style: dashed;
+    background: repeating-linear-gradient(135deg, var(--bg-card) 0 7px, var(--bg-sunken) 7px 8px);
+}
+.meal-nota-texto { font-size: 0.88rem; font-style: italic; color: var(--text-secondary); }
 
 /* Vista de escritorio: semana completa (oculta en móvil, ver media query) */
 #menu-week-view { display: none; }
@@ -466,11 +474,34 @@ textarea.form-input { resize: vertical; font-family: inherit; }
     padding: 8px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 6px;
     font-size: 0.85rem;
 }
-.menu-grid-cell-empty {
-    color: var(--text-muted); align-items: center; justify-content: center; cursor: pointer;
-    background: var(--bg-card); border: 1px solid var(--border-color); font: inherit; transition: var(--transition-fast);
-}
+.menu-grid-cell-empty { position: relative; padding: 0; transition: var(--transition-fast); }
 .menu-grid-cell-empty:hover { border-color: var(--primary); }
+.menu-grid-cell-add {
+    flex: 1; width: 100%; min-height: 62px; background: none; border: none; border-radius: 10px;
+    color: var(--text-muted); font: inherit; cursor: pointer;
+}
+
+/* Nota de una comida concreta ("comemos en casa de los padres"): discreta, en cursiva y,
+   si no hay platos, sobre un rayado suave para que se vea que el hueco no está vacío. */
+.menu-grid-cell-nota {
+    justify-content: space-between; border-style: dashed;
+    background: repeating-linear-gradient(135deg, var(--bg-card) 0 7px, var(--bg-sunken) 7px 8px);
+}
+.menu-comida-nota {
+    width: 100%; background: none; border: none; padding: 2px 4px; text-align: left; cursor: pointer;
+    font: inherit; font-size: 0.75rem; font-style: italic; color: var(--text-secondary);
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere;
+}
+.menu-comida-nota:hover { color: var(--primary); }
+.menu-grid-cell-footer { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+/* "+ nota" solo aparece al pasar el ratón por la celda (o con el foco del teclado) */
+.menu-grid-nota-add {
+    background: none; border: none; padding: 2px 4px; color: var(--text-muted); font: inherit; font-size: 0.68rem;
+    cursor: pointer; opacity: 0; transition: var(--transition-fast); white-space: nowrap;
+}
+.menu-grid-cell-empty .menu-grid-nota-add { position: absolute; right: 2px; bottom: 1px; }
+.menu-grid-cell:hover .menu-grid-nota-add, .menu-grid-nota-add:focus-visible { opacity: 1; }
+.menu-grid-nota-add:hover { color: var(--primary); }
 .menu-grid-comensales { color: var(--text-secondary); font-size: 0.75rem; }
 
 /* Un plato dentro de una celda con varios asignados (varios comensales, primer/segundo...) */
@@ -682,7 +713,12 @@ button.compra-item-info, label.compra-item-info { cursor: pointer; }
     .top-bar { padding: 26px 40px 16px; }
     .content-container { max-width: 1040px; margin: 0 auto; padding: 4px 40px 60px; }
 
-    .lotes-list, .recetas-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    /* minmax(0, 1fr): sin él, el texto largo de una tarjeta (descripción en una línea) ensancha
+       la columna y la rejilla se sale por la derecha, quedando descentrada. */
+    .lotes-list, .recetas-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    /* Recetas: en escritorio usa todo el ancho de la pantalla, con tantas columnas como quepan. */
+    .content-container:has(#screen-recetas.active) { max-width: none; }
+    .recetas-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 
     #menu-day-view { display: none; }
     #menu-week-view { display: block; }

@@ -34,7 +34,7 @@ function renderMenuSemanal() {
         btn.addEventListener('click', () => openMenuEntryModal(btn.dataset.fecha, btn.dataset.tipo, null));
     });
     DOM.menuGrid.querySelectorAll('[data-nota-fecha]').forEach(btn => {
-        btn.addEventListener('click', () => openNotaDiaModal(btn.dataset.notaFecha));
+        btn.addEventListener('click', () => openNotaDiaModal(btn.dataset.notaFecha, btn.dataset.notaTipo));
     });
     DOM.menuGrid.querySelectorAll('[data-entrada-id]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -50,9 +50,32 @@ function renderMenuSemanal() {
 
 // Un hueco (fecha+comida) puede tener varios platos asignados (varios comensales comiendo
 // cosas distintas, o primer y segundo plato): entradas es un array, no una única entrada.
+// También puede tener una nota ("comemos en casa de los padres"): se ve discreta, en cursiva
+// y sobre fondo rayado si no hay platos, para que no parezca ni un plato ni un hueco vacío.
 function menuCellHtml(fecha, tipo, entradas) {
+    const nota = getNotaComida(fecha, tipo);
+    const notaHtml = nota
+        ? `<button type="button" class="menu-comida-nota" data-nota-fecha="${fecha}" data-nota-tipo="${tipo}" title="${escapeHtml(nota)}">${escapeHtml(nota)}</button>`
+        : '';
+    const notaAdd = nota
+        ? ''
+        : `<button type="button" class="menu-grid-nota-add" data-nota-fecha="${fecha}" data-nota-tipo="${tipo}" title="Añadir nota a esta comida">+ nota</button>`;
+
+    if (entradas.length === 0 && !nota) {
+        return `
+            <div class="menu-grid-cell menu-grid-cell-empty">
+                <button type="button" class="menu-grid-cell-add" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir</button>
+                ${notaAdd}
+            </div>
+        `;
+    }
     if (entradas.length === 0) {
-        return `<button type="button" class="menu-grid-cell menu-grid-cell-empty" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir</button>`;
+        return `
+            <div class="menu-grid-cell menu-grid-cell-nota">
+                ${notaHtml}
+                <button type="button" class="menu-grid-add-more" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir plato</button>
+            </div>
+        `;
     }
     const platos = entradas.map(entrada => {
         const receta = getReceta(entrada.recetaId);
@@ -66,8 +89,12 @@ function menuCellHtml(fecha, tipo, entradas) {
     }).join('');
     return `
         <div class="menu-grid-cell">
+            ${notaHtml}
             ${platos}
-            <button type="button" class="menu-grid-add-more" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir plato</button>
+            <div class="menu-grid-cell-footer">
+                <button type="button" class="menu-grid-add-more" data-menu-add data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir plato</button>
+                ${notaAdd}
+            </div>
         </div>
     `;
 }
@@ -108,6 +135,13 @@ function renderAgendaDia() {
     DOM.menuAgenda.innerHTML = notaHtml + TIPOS_COMIDA.map(tipo => {
         const entradas = state.menuSemanal.filter(m => m.activa && m.fecha === fecha && m.tipo_comida === tipo);
 
+        const notaComida = getNotaComida(fecha, tipo);
+        const notaComidaHtml = notaComida
+            ? `<button type="button" class="meal-row meal-nota" data-nota-fecha="${fecha}" data-nota-tipo="${tipo}">
+                <span class="meal-nota-texto">${escapeHtml(notaComida)}</span>
+            </button>`
+            : '';
+
         const platos = entradas.length > 0
             ? entradas.map(entrada => {
                 const receta = getReceta(entrada.recetaId);
@@ -116,20 +150,26 @@ function renderAgendaDia() {
                     <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
                 </button>`;
             }).join('')
-            : `<button type="button" class="meal-row" data-fecha="${fecha}" data-tipo="${tipo}">
-                <span class="meal-value empty">Añadir receta</span>
-                <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
-            </button>`;
+            : notaComida
+                ? '' // con nota y sin platos ("comemos fuera") no se muestra el hueco vacío
+                : `<button type="button" class="meal-row" data-fecha="${fecha}" data-tipo="${tipo}">
+                    <span class="meal-value empty">Añadir receta</span>
+                    <svg class="icon-sm"><use href="#ic-chev-right"/></svg>
+                </button>`;
 
-        const addMas = entradas.length > 0
-            ? `<button type="button" class="text-btn meal-add-mas" data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir otro plato</button>`
+        const addMas = entradas.length > 0 || notaComida
+            ? `<button type="button" class="text-btn meal-add-mas" data-fecha="${fecha}" data-tipo="${tipo}">+ Añadir ${entradas.length > 0 ? 'otro plato' : 'plato'}</button>`
             : '';
 
-        return `<h3 class="section-subtitle">${TIPO_COMIDA_LABELS[tipo]}</h3>${platos}${addMas}`;
+        const notaAdd = notaComida
+            ? ''
+            : `<button type="button" class="text-btn meal-nota-add" data-nota-fecha="${fecha}" data-nota-tipo="${tipo}">+ nota</button>`;
+
+        return `<div class="meal-head"><h3 class="section-subtitle">${TIPO_COMIDA_LABELS[tipo]}</h3>${notaAdd}</div>${notaComidaHtml}${platos}${addMas}`;
     }).join('');
 
     DOM.menuAgenda.querySelectorAll('[data-nota-fecha]').forEach(row => {
-        row.addEventListener('click', () => openNotaDiaModal(row.dataset.notaFecha));
+        row.addEventListener('click', () => openNotaDiaModal(row.dataset.notaFecha, row.dataset.notaTipo));
     });
     DOM.menuAgenda.querySelectorAll('[data-entrada-id]').forEach(row => {
         row.addEventListener('click', () => {
@@ -370,17 +410,32 @@ async function handleDeleteMenuEntry() {
 
 /* ==========================================================================
    Notas por día ("fuera todo el día", "no cenamos en casa"...): tabla `notas_menu`
-   (fecha PK, texto), en state.notasMenu. Ver DOCUMENTACIÓN-TECNICA.md §3.
+   (fecha PK, texto), en state.notasMenu. Y notas de una comida concreta ("comemos en
+   casa de los padres"): tabla `notas_comida` (fecha + tipo_comida PK, texto), en
+   state.notasComida. Las dos se editan con el mismo modal. Ver DOCUMENTACIÓN-TECNICA.md §3.
    ========================================================================== */
 function getNotaDia(fecha) {
     const nota = state.notasMenu.find(n => n.fecha === fecha);
     return nota ? nota.texto.trim() : '';
 }
 
-function openNotaDiaModal(fecha) {
-    const nota = getNotaDia(fecha);
+function getNotaComida(fecha, tipo) {
+    const nota = state.notasComida.find(n => n.fecha === fecha && n.tipo_comida === tipo);
+    return nota ? nota.texto.trim() : '';
+}
+
+// tipo vacío/undefined = nota del día; 'desayuno'/'comida'/'cena' = nota de esa comida.
+function openNotaDiaModal(fecha, tipo) {
     state.editingNotaFecha = fecha;
-    DOM.modalNotaDiaTitle.textContent = `Nota · ${formatDate(fecha)}`;
+    state.editingNotaTipo = tipo || null;
+    const nota = tipo ? getNotaComida(fecha, tipo) : getNotaDia(fecha);
+    DOM.modalNotaDiaTitle.textContent = tipo
+        ? `Nota · ${TIPO_COMIDA_LABELS[tipo]} · ${formatDate(fecha)}`
+        : `Nota del día · ${formatDate(fecha)}`;
+    DOM.labelNotaDia.textContent = tipo ? `Nota (${TIPO_COMIDA_LABELS[tipo].toLowerCase()})` : 'Nota del día';
+    DOM.inNotaDia.placeholder = tipo
+        ? 'Ej.: Comemos en casa de los padres · Cena fuera'
+        : 'Ej.: Fuera todo el día · No cenamos en casa';
     DOM.inNotaDia.value = nota;
     DOM.btnDeleteNotaDia.classList.toggle('hidden', !nota);
     DOM.modalNotaDia.classList.remove('hidden');
@@ -390,20 +445,30 @@ function openNotaDiaModal(fecha) {
 function closeNotaDiaModal() {
     DOM.modalNotaDia.classList.add('hidden');
     state.editingNotaFecha = null;
+    state.editingNotaTipo = null;
 }
 
 async function guardarNotaDia(texto, mensaje) {
     const fecha = state.editingNotaFecha;
+    const tipo = state.editingNotaTipo;
     if (!fecha) return;
-    const result = texto
-        ? await apiRequest('nota_menu', 'POST', { fecha, texto })
-        : await apiRequest('eliminar_nota_menu', 'DELETE', { fecha });
+    let result;
+    if (tipo) {
+        result = texto
+            ? await apiRequest('nota_comida', 'POST', { fecha, tipo_comida: tipo, texto })
+            : await apiRequest('eliminar_nota_comida', 'DELETE', { fecha, tipo_comida: tipo });
+    } else {
+        result = texto
+            ? await apiRequest('nota_menu', 'POST', { fecha, texto })
+            : await apiRequest('eliminar_nota_menu', 'DELETE', { fecha });
+    }
     if (result && result.success) {
         closeNotaDiaModal();
         showToast(mensaje, 'success');
         renderMenuSemanal();
     } else {
-        showToast(result?.error || 'No se pudo guardar la nota (¿falta la tabla "notas_menu" en Supabase?)', 'error');
+        const tabla = tipo ? 'notas_comida' : 'notas_menu';
+        showToast(result?.error || `No se pudo guardar la nota (¿falta la tabla "${tabla}" en Supabase?)`, 'error');
     }
 }
 
@@ -415,6 +480,19 @@ function handleNotaDiaSubmit(e) {
 
 function handleDeleteNotaDia() {
     return guardarNotaDia('', 'Nota borrada');
+}
+
+// Flechas ‹ › del menú: en el móvil (vista de un día) pasan al día anterior/siguiente,
+// cambiando de semana al pasar del domingo al lunes; en escritorio (semana completa), de semana.
+// 860px: mismo corte que la media query de escritorio de style.css.
+function goToPrevNext(delta) {
+    if (window.matchMedia('(min-width: 860px)').matches) {
+        goToWeek(delta);
+        return;
+    }
+    state.selectedDayISO = addDaysToISO(state.selectedDayISO, delta);
+    state.selectedWeekStart = getMonday(new Date(state.selectedDayISO + 'T00:00:00'));
+    renderMenuSemanal();
 }
 
 function goToWeek(offsetWeeks) {

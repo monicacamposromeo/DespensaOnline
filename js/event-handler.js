@@ -174,8 +174,8 @@ function initRecetasActions() {
 }
 
 function initMenuActions() {
-    DOM.btnWeekPrev.addEventListener('click', () => goToWeek(-1));
-    DOM.btnWeekNext.addEventListener('click', () => goToWeek(1));
+    DOM.btnWeekPrev.addEventListener('click', () => goToPrevNext(-1));
+    DOM.btnWeekNext.addEventListener('click', () => goToPrevNext(1));
     DOM.btnWeekToday.addEventListener('click', goToCurrentWeek);
     DOM.btnGenerarLista.addEventListener('click', handleGenerarListaClick);
     DOM.btnCloseModalMenuEntry.addEventListener('click', closeMenuEntryModal);

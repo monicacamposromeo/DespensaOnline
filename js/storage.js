@@ -12,6 +12,7 @@ function validateLocalJSON(data) {
     if (!Array.isArray(data.menuSemanal)) data.menuSemanal = [];
     if (!Array.isArray(data.listaCompra)) data.listaCompra = [];
     if (!Array.isArray(data.notasMenu)) data.notasMenu = [];
+    if (!Array.isArray(data.notasComida)) data.notasComida = [];
     return true;
 }
 
@@ -71,6 +72,7 @@ function handleLocalFileSelected(file) {
                 state.listaCompra = data.listaCompra || [];
                 state.ajustes = data.ajustes || {};
                 state.notasMenu = data.notasMenu || [];
+                state.notasComida = data.notasComida || [];
                 saveLocalCache();
                 showAppInterface();
                 updateLocalModeUI();
@@ -98,6 +100,7 @@ function loadDefaultLocalStructure() {
     state.listaCompra = [];
     state.ajustes = {};
     state.notasMenu = [];
+    state.notasComida = [];
 }
 
 function createNewLocalDB() {
@@ -125,7 +128,8 @@ function saveLocalCache() {
         menuSemanal: state.menuSemanal,
         listaCompra: state.listaCompra,
         ajustes: state.ajustes,
-        notasMenu: state.notasMenu
+        notasMenu: state.notasMenu,
+        notasComida: state.notasComida
     }));
 }
 
@@ -182,7 +186,8 @@ function downloadLocalDB() {
         menuSemanal: state.menuSemanal,
         listaCompra: state.listaCompra,
         ajustes: state.ajustes,
-        notasMenu: state.notasMenu
+        notasMenu: state.notasMenu,
+        notasComida: state.notasComida
     };
     const blob = new Blob([JSON.stringify(dbData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -222,6 +227,7 @@ function checkLocalCache() {
                     state.listaCompra = data.listaCompra || [];
                     state.ajustes = data.ajustes || {};
                     state.notasMenu = data.notasMenu || [];
+                    state.notasComida = data.notasComida || [];
 
                     showAppInterface();
                     updateLocalModeUI();
@@ -306,6 +312,7 @@ function loadDemoData() {
 
     state.ajustes = {};
     state.notasMenu = [];
+    state.notasComida = [];
 
     renderAllScreens();
 }
@@ -506,6 +513,18 @@ function applyWriteAction(action, data, persist) {
         }
         case 'eliminar_nota_menu': {
             state.notasMenu = state.notasMenu.filter(n => n.fecha !== data.fecha);
+            commit();
+            return { success: true, message: 'Nota borrada' };
+        }
+        case 'nota_comida': {
+            const existente = state.notasComida.find(n => n.fecha === data.fecha && n.tipo_comida === data.tipo_comida);
+            if (existente) existente.texto = data.texto;
+            else state.notasComida.push({ fecha: data.fecha, tipo_comida: data.tipo_comida, texto: data.texto });
+            commit();
+            return { success: true, message: 'Nota guardada' };
+        }
+        case 'eliminar_nota_comida': {
+            state.notasComida = state.notasComida.filter(n => !(n.fecha === data.fecha && n.tipo_comida === data.tipo_comida));
             commit();
             return { success: true, message: 'Nota borrada' };
         }

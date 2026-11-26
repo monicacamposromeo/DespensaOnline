@@ -30,6 +30,8 @@ const state = {
     listaCompra: [],
     // Notas por día del menú [{ fecha, texto }] (tabla `notas_menu` en Supabase). Ver getNotaDia().
     notasMenu: [],
+    // Notas por comida concreta [{ fecha, tipo_comida, texto }] (tabla `notas_comida`). Ver getNotaComida().
+    notasComida: [],
     // Ajustes de la app compartidos entre dispositivos (tabla `ajustes` en Supabase, o dentro
     // del archivo de datos en modo Local): { clave: valor }. Ver llevoTupper().
     ajustes: {},
@@ -38,6 +40,7 @@ const state = {
     editingRecetaId: null,
     editingMenuEntry: null,
     editingNotaFecha: null,
+    editingNotaTipo: null, // null = nota del día; 'desayuno'/'comida'/'cena' = nota de esa comida
     editingProductoId: null,
     editingLoteGrupoPrefill: null,
 
@@ -282,6 +285,7 @@ const DOM = {
     btnCloseModalNotaDia: document.getElementById('btn-close-modal-nota-dia'),
     formNotaDia: document.getElementById('form-nota-dia'),
     inNotaDia: document.getElementById('in-nota-dia'),
+    labelNotaDia: document.getElementById('label-nota-dia'),
     btnDeleteNotaDia: document.getElementById('btn-delete-nota-dia'),
     btnCancelNotaDia: document.getElementById('btn-cancel-nota-dia')
 };
